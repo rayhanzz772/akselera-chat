@@ -60,10 +60,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className={isDark ? "dark min-h-screen bg-background text-foreground" : "min-h-screen bg-background text-foreground"}>
+    <main className={`flex min-h-dvh flex-col bg-background text-foreground${isDark ? " dark" : ""}`}>
       <Header onThemeChange={() => setIsDark((current) => !current)} isDark={isDark} />
 
-      <div className="mx-auto flex min-h-[calc(100vh-104px)] w-full max-w-6xl items-center justify-center px-6 pb-16">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-6 pb-16">
         <Card className="w-full max-w-md">
           <CardContent className="p-8 sm:p-10">
             <div className="mb-8">

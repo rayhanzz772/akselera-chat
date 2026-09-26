@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearAuthToken, getCurrentUser } from "@/lib/api/auth";
 import { getAuthToken } from "@/lib/api/client";
@@ -10,7 +10,7 @@ import { createMessage, getMessages, type LoadedMessage } from "@/lib/api/messag
 import { decryptMessage, encryptMessage } from "@/lib/crypto/messages";
 import { clearPrivateKey, getPrivateKey, getPublicKey, restoreSessionKeys, setPublicKey } from "@/lib/crypto/session";
 import { getPublicKeyFromPrivateKey } from "@/lib/crypto/user-keys";
-import { Trash2 } from "lucide-react";
+import { ArrowLeft, Contact, Trash2 } from "lucide-react";
 import { io, type Socket } from "socket.io-client";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
@@ -109,6 +109,9 @@ export default function ChatPage() {
 	const [conversationError, setConversationError] = useState("");
 	const [isCreatingConversation, setIsCreatingConversation] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+	const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+	const isNearBottomRef = useRef(true);
 
 	useEffect(() => {
 		Promise.all([getCurrentUser(), getConversations()])
@@ -190,6 +193,7 @@ export default function ChatPage() {
 	}, [userId]);
 
 	async function handleSelectRoom(room: Room) {
+		isNearBottomRef.current = true;
 		setSelectedRoom(room);
 		setRooms((currentRooms) => currentRooms.map((currentRoom) => currentRoom.id === room.id
 			? { ...currentRoom, unreadCount: 0 }
@@ -328,6 +332,24 @@ export default function ChatPage() {
 		return () => window.clearTimeout(timeout);
 	}, [userSearch]);
 
+	useEffect(() => {
+		const container = messagesContainerRef.current;
+		if (!container) return;
+
+		// Jangan tarik paksa ke bawah kalau pengguna sedang membaca pesan lama.
+		if (!isNearBottomRef.current) return;
+
+		container.scrollTop = container.scrollHeight;
+	}, [messages, messagesConversationId]);
+
+	function handleMessagesScroll() {
+		const container = messagesContainerRef.current;
+		if (!container) return;
+
+		isNearBottomRef.current =
+			container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+	}
+
 	async function handleSend(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		setMessageError("");
@@ -357,6 +379,7 @@ export default function ChatPage() {
 				} catch {
 				}
 			}
+			isNearBottomRef.current = true;
 			setMessages((currentMessages) => uniqueById([...currentMessages, visibleMessage]));
 			setRooms((currentRooms) => currentRooms.map((room) => room.id === selectedRoom.id
 				? { ...room, preview: "text" in visibleMessage ? visibleMessage.text : "Encrypted message", time: formatConversationTime(createdMessage.created_at), unreadCount: 0 }
@@ -417,25 +440,29 @@ export default function ChatPage() {
 		}
 	}
 
+	function confirmLogout() {
+		clearAuthToken();
+		clearPrivateKey();
+		setIsLogoutDialogOpen(false);
+		router.replace("/login");
+	}
+
 	return (
-		<main className={isDark ? "dark min-h-screen bg-background text-foreground" : "min-h-screen bg-background text-foreground"}>
+		<main className={`flex h-dvh flex-col overflow-hidden bg-background text-foreground${isDark ? " dark" : ""}`}>
 			<Header
 				isDark={isDark}
 				onThemeChange={() => setIsDark((current) => !current)}
 				userName={userName || "Loading..."}
-				onLogout={() => {
-					clearAuthToken();
-					clearPrivateKey();
-					router.replace("/login");
-				}}
+				onLogout={() => setIsLogoutDialogOpen(true)}
+				className={selectedRoom ? "max-md:hidden" : ""}
 			/>
 
 			{isLoadingUser ? (
-				<div className="flex h-[calc(100vh-104px)] items-center justify-center text-sm text-muted-foreground">
+				<div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
 					Loading your chats...
 				</div>
-			) : <div className="mx-auto flex h-[calc(100vh-104px)] w-full max-w-6xl overflow-hidden border-y bg-card">
-				<aside className="flex min-h-0 w-full max-w-sm shrink-0 flex-col border-r md:w-[34%]">
+			) : <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 overflow-hidden border-y bg-card">
+				<aside className={`min-h-0 w-full shrink-0 flex-col border-r md:flex md:max-w-sm md:w-[34%] ${selectedRoom ? "hidden" : "flex"}`}>
 					<div className="flex items-center gap-2 p-6">
 						<Input
 							aria-label="Search chats"
@@ -487,11 +514,14 @@ export default function ChatPage() {
 					</div>
 				</aside>
 
-				<section className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
+				<section className={`min-h-0 min-w-0 flex-1 flex-col md:flex ${selectedRoom ? "flex" : "hidden"}`}>
 					{selectedRoom ? (
 						<>
-							<div className="flex items-center justify-between gap-3 border-b px-8 py-5">
+							<div className="flex items-center justify-between gap-3 border-b px-4 py-5 md:px-8">
 								<div className="flex items-center gap-3">
+									<Button type="button" variant="ghost" size="icon" className="md:hidden" onClick={() => setSelectedRoom(null)} aria-label="Back to conversations" title="Back to conversations">
+										<ArrowLeft className="size-4" />
+									</Button>
 									<span className="flex size-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">{selectedRoom.initials}</span>
 									<div>
 										<h1 className="font-semibold">{selectedRoom.name}</h1>
@@ -502,7 +532,11 @@ export default function ChatPage() {
 									<Trash2 className="size-4" />
 								</Button>
 							</div>
-							<div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-muted/30 p-8">
+							<div
+								ref={messagesContainerRef}
+								onScroll={handleMessagesScroll}
+								className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-muted/30 p-4 md:p-8"
+							>
 								{isLoadingMessages && <p className="text-sm text-muted-foreground">Loading messages...</p>}
 								{!isLoadingMessages && visibleMessages.length === 0 && <p className="text-sm text-muted-foreground">Start a secure conversation with {selectedRoom.name}.</p>}
 								{visibleMessages.map((chatMessage, index) => {
@@ -513,7 +547,7 @@ export default function ChatPage() {
 										<div key={chatMessage.id} className="shrink-0 space-y-3">
 											{isNewDate && <div className="py-3 text-center text-xs font-medium text-muted-foreground">{formatMessageDate(chatMessage.created_at)}</div>}
 															<div className={`flex ${String(chatMessage.sender_id) === String(userId) ? "justify-end" : "justify-start"}`}>
-																<div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow-sm ${String(chatMessage.sender_id) === String(userId) ? "bg-foreground text-background" : "bg-card"}`}>
+																<div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow-sm ${String(chatMessage.sender_id) === String(userId) ? "bg-foreground text-background" : "bg-bubble"}`}>
 																	<p className="whitespace-pre-wrap">{"text" in chatMessage ? chatMessage.text : "Encrypted message"}</p>
 																	<time className={`mt-2 block text-right text-[11px] ${String(chatMessage.sender_id) === String(userId) ? "text-background/70" : "text-muted-foreground"}`} dateTime={chatMessage.created_at}>
 																		{formatMessageTime(chatMessage.created_at)}
@@ -532,9 +566,7 @@ export default function ChatPage() {
 						</>
 					) : (
 						<div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-							<Card className="mb-7 flex size-24 items-center justify-center rounded-3xl bg-muted shadow-none">
-								<span className="text-4xl text-muted-foreground" aria-hidden="true">≡</span>
-							</Card>
+							<Contact className="mb-4 h-24 w-24 text-muted-foreground" />
 							<h1 className="text-xl font-semibold">Pilih percakapan atau mulai chat baru</h1>
 							<p className="mt-3 max-w-md text-base text-muted-foreground">Daftar hanya berisi percakapan milik akun yang login.</p>
 						</div>
@@ -614,6 +646,21 @@ export default function ChatPage() {
 					<DialogFooter>
 						<Button type="button" variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
 						<Button type="button" onClick={() => void confirmDeleteConversation()}>Delete conversation</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Log out?</DialogTitle>
+						<DialogDescription>
+							You will be signed out and your private key will be cleared from memory on this device. Log back in to read your messages again.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button type="button" variant="outline" onClick={() => setIsLogoutDialogOpen(false)}>Cancel</Button>
+						<Button type="button" onClick={confirmLogout}>Log out</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>

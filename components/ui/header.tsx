@@ -9,11 +9,12 @@ interface HeaderProps {
   onThemeChange: () => void;
   userName?: string;
   onLogout?: () => void;
+  className?: string;
 }
 
-export function Header({ isDark, onThemeChange, userName, onLogout }: HeaderProps) {
+export function Header({ isDark, onThemeChange, userName, onLogout, className = "" }: HeaderProps) {
   return (
-    <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
+    <header className={`mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between px-6 py-6 ${className}`}>
       <Image
         src={isDark ? "/assets/logo/white.png" : "/assets/logo/dark.png"}
         alt="Akselera Tech"
