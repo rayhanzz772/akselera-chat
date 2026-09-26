@@ -6,10 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate": "sequelize-cli db:migrate",
+    "seed: all": "sequelize-cli db:seed:all"
   },
   "dependencies": {
     "argon2": "^0.45.1",
+    "dotenv": "^18.0.4",
     "next": "16.3.6",
     "next-auth": "^4.24.15",
     "pg": "^8.23.0",
@@ -22,10 +25,12 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20.19.43",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "sequelize-cli": "^6.6.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
