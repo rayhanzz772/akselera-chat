@@ -3,18 +3,30 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearAuthToken, getCurrentUser } from "@/lib/api/auth";
-import { createConversation, getConversations } from "@/lib/api/conversations";
+import { getAuthToken } from "@/lib/api/client";
+import { createConversation, deleteConversation, getConversations, markConversationRead } from "@/lib/api/conversations";
 import { getUsers } from "@/lib/api/users";
 import { createMessage, getMessages, type LoadedMessage } from "@/lib/api/messages";
 import { decryptMessage, encryptMessage } from "@/lib/crypto/messages";
 import { clearPrivateKey, getPrivateKey, getPublicKey, restoreSessionKeys, setPublicKey } from "@/lib/crypto/session";
 import { getPublicKeyFromPrivateKey } from "@/lib/crypto/user-keys";
+import { Trash2 } from "lucide-react";
+import { io, type Socket } from "socket.io-client";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { Conversation, DecryptedMessage, Room, UserSummary } from "@/types/chat";
+import type { Conversation, DecryptedMessage, EncryptedMessage, Room, UserSummary } from "@/types/chat";
+
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8001";
+
+type ConversationUpdatedEvent = {
+	conversation_id: string;
+	last_message: EncryptedMessage;
+	updated_at: string;
+	unread_count: number;
+};
 
 function formatConversationTime(value: string) {
 	const date = new Date(value);
@@ -43,12 +55,24 @@ function formatMessageDate(value: string) {
 	});
 }
 
+function formatMessageTime(value: string) {
+	return new Date(value).toLocaleTimeString([], {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+}
+
+function uniqueById<T extends { id: string }>(items: T[]) {
+	return Array.from(new Map(items.map((item) => [item.id, item])).values());
+}
+
 function mapConversation(conversation: Conversation): Room {
 	const name = conversation.opponent.name;
 
 	return {
 		id: conversation.id,
 		opponentId: conversation.opponent.id,
+		unreadCount: conversation.unread_count ?? 0,
 		publicKey: conversation.opponent.public_key,
 		initials: name
 			.split(" ")
@@ -84,6 +108,7 @@ export default function ChatPage() {
 	const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 	const [conversationError, setConversationError] = useState("");
 	const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
 	useEffect(() => {
 		Promise.all([getCurrentUser(), getConversations()])
@@ -92,7 +117,7 @@ export default function ChatPage() {
 				setUserId(user.id);
 				await restoreSessionKeys();
 				const currentPrivateKey = getPrivateKey();
-				const initialRooms = response.data.map(mapConversation);
+				const initialRooms = uniqueById(response.data.map(mapConversation));
 				const roomsWithPreviews = await Promise.all(initialRooms.map(async (room) => {
 					if (!currentPrivateKey) return room;
 
@@ -121,47 +146,166 @@ export default function ChatPage() {
 	}, [router]);
 
 	useEffect(() => {
-		if (!selectedRoom) {
-			return;
-		}
+		if (!userId) return;
 
 		let isCurrent = true;
+		const token = getAuthToken();
+		const userSocket = io(SOCKET_URL, {
+			auth: token ? { token } : undefined,
+			withCredentials: true,
+		});
 
-		getMessages(selectedRoom.id)
-			.then(async (encryptedMessages) => {
-				const currentPrivateKey = getPrivateKey();
-				const decryptedMessages = await Promise.all(encryptedMessages.map(async (encryptedMessage) => {
-					if (!currentPrivateKey) return encryptedMessage;
+		userSocket.on("connect_error", (error) => {
+			if (isCurrent) setMessageError(`Socket authentication failed: ${error.message}`);
+		});
 
-					try {
-						return {
-							...encryptedMessage,
-							text: await decryptMessage(encryptedMessage, currentPrivateKey),
-						} satisfies DecryptedMessage;
-					} catch {
-						return encryptedMessage;
-					}
-				}));
+		userSocket.on("conversation:updated", async (event: ConversationUpdatedEvent) => {
+			if (!isCurrent) return;
 
-				if (!isCurrent) return;
-				setMessages(decryptedMessages);
-				setMessagesConversationId(selectedRoom.id);
-				const latest = decryptedMessages.at(-1);
-				if (latest) {
-					setRooms((currentRooms) => currentRooms.map((room) => room.id === selectedRoom.id
-						? { ...room, preview: "text" in latest ? latest.text : "Encrypted message", time: formatConversationTime(latest.created_at) }
-						: room));
+			const currentPrivateKey = getPrivateKey();
+			let preview = "Encrypted message";
+			if (currentPrivateKey) {
+				try {
+					preview = await decryptMessage(event.last_message, currentPrivateKey);
+				} catch {
+					// Keep the encrypted fallback when this client cannot decrypt the event.
 				}
-			})
-			.catch((loadingError) => {
-				if (isCurrent) setMessageError(loadingError instanceof Error ? loadingError.message : "Messages could not be loaded.");
-			})
-			.finally(() => {
-				if (isCurrent) setIsLoadingMessages(false);
+			}
+
+			setRooms((currentRooms) => {
+				const updatedRoom = currentRooms.find((room) => room.id === event.conversation_id);
+				if (!updatedRoom) return currentRooms;
+
+				return [
+					{ ...updatedRoom, preview, time: formatConversationTime(event.updated_at), unreadCount: event.unread_count },
+					...currentRooms.filter((room) => room.id !== event.conversation_id),
+				];
 			});
+		});
 
 		return () => {
 			isCurrent = false;
+			userSocket.disconnect();
+		};
+	}, [userId]);
+
+	async function handleSelectRoom(room: Room) {
+		setSelectedRoom(room);
+		setRooms((currentRooms) => currentRooms.map((currentRoom) => currentRoom.id === room.id
+			? { ...currentRoom, unreadCount: 0 }
+			: currentRoom));
+
+		try {
+			await markConversationRead(room.id);
+		} catch (readError) {
+			setMessageError(readError instanceof Error ? readError.message : "Conversation could not be marked as read.");
+		}
+	}
+
+	function handleDeleteConversation() {
+		if (!selectedRoom) return;
+		setIsDeleteDialogOpen(true);
+	}
+
+	async function confirmDeleteConversation() {
+		if (!selectedRoom) return;
+
+		try {
+			await deleteConversation(selectedRoom.id);
+			setRooms((currentRooms) => currentRooms.filter((room) => room.id !== selectedRoom.id));
+			setSelectedRoom(null);
+			setMessages([]);
+			setMessagesConversationId(null);
+			setMessageError("");
+			setIsDeleteDialogOpen(false);
+		} catch (deleteError) {
+			setMessageError(deleteError instanceof Error ? deleteError.message : "Conversation could not be deleted.");
+		}
+	}
+
+	useEffect(() => {
+		if (!selectedRoom) {
+			return;
+		}
+		const conversationId = selectedRoom.id;
+
+		let isCurrent = true;
+		let socket: Socket | null = null;
+
+		async function decryptMessages(encryptedMessages: EncryptedMessage[]) {
+			const currentPrivateKey = getPrivateKey();
+			return Promise.all(encryptedMessages.map(async (encryptedMessage) => {
+				if (!currentPrivateKey) return encryptedMessage;
+
+				try {
+					return {
+						...encryptedMessage,
+						text: await decryptMessage(encryptedMessage, currentPrivateKey),
+					} satisfies DecryptedMessage;
+				} catch {
+					return encryptedMessage;
+				}
+			}));
+		}
+
+		async function loadHistory() {
+			setIsLoadingMessages(true);
+
+			try {
+				const encryptedMessages = await getMessages(conversationId);
+				const decryptedMessages = await decryptMessages(encryptedMessages);
+				if (!isCurrent) return;
+
+				setMessages(uniqueById(decryptedMessages));
+				setMessagesConversationId(conversationId);
+				const latest = decryptedMessages.at(-1);
+				if (latest) {
+					setRooms((currentRooms) => currentRooms.map((room) => room.id === conversationId
+						? { ...room, preview: "text" in latest ? latest.text : "Encrypted message", time: formatConversationTime(latest.created_at), unreadCount: 0 }
+						: room));
+				}
+			} catch (loadingError) {
+				if (isCurrent) setMessageError(loadingError instanceof Error ? loadingError.message : "Messages could not be loaded.");
+			} finally {
+				if (isCurrent) setIsLoadingMessages(false);
+			}
+			if (!isCurrent) return;
+
+			const token = getAuthToken();
+			socket = io(SOCKET_URL, {
+				auth: token ? { token } : undefined,
+				withCredentials: true,
+			});
+
+			socket.on("connect_error", (error) => {
+				if (isCurrent) setMessageError(`Socket authentication failed: ${error.message}`);
+			});
+
+			socket.on("connect", () => {
+				socket?.emit("conversation:join", conversationId, (response: { success: boolean; conversation_id?: string; message?: string }) => {
+					if (isCurrent && !response.success) setMessageError(response.message || "Could not join conversation.");
+				});
+			});
+
+			socket.on("message:new", async (newMessage: EncryptedMessage) => {
+				if (!isCurrent || newMessage.conversation_id !== conversationId) return;
+
+				const [decryptedMessage] = await decryptMessages([newMessage]);
+				setMessages((currentMessages) => uniqueById([...currentMessages, decryptedMessage]));
+				setRooms((currentRooms) => currentRooms.map((room) => room.id === conversationId
+					? { ...room, preview: "text" in decryptedMessage ? decryptedMessage.text : "Encrypted message", time: formatConversationTime(newMessage.created_at), unreadCount: 0 }
+					: room));
+			});
+		}
+
+		void loadHistory();
+
+		return () => {
+			isCurrent = false;
+			if (socket) {
+				socket.emit("conversation:leave", conversationId);
+				socket.disconnect();
+			}
 		};
 	}, [selectedRoom]);
 
@@ -213,9 +357,9 @@ export default function ChatPage() {
 				} catch {
 				}
 			}
-			setMessages((currentMessages) => [...currentMessages, visibleMessage]);
+			setMessages((currentMessages) => uniqueById([...currentMessages, visibleMessage]));
 			setRooms((currentRooms) => currentRooms.map((room) => room.id === selectedRoom.id
-				? { ...room, preview: "text" in visibleMessage ? visibleMessage.text : "Encrypted message", time: formatConversationTime(createdMessage.created_at) }
+				? { ...room, preview: "text" in visibleMessage ? visibleMessage.text : "Encrypted message", time: formatConversationTime(createdMessage.created_at), unreadCount: 0 }
 				: room));
 			setMessage("");
 		} catch (submissionError) {
@@ -236,7 +380,7 @@ export default function ChatPage() {
 		try {
 			await createConversation(selectedUser.email);
 			const refreshedConversations = await getConversations();
-			const refreshedRooms = refreshedConversations.data.map(mapConversation);
+			const refreshedRooms = uniqueById(refreshedConversations.data.map(mapConversation));
 			const room = refreshedRooms.find((conversationRoom) => conversationRoom.opponentId === selectedUser.id);
 
 			if (!room) {
@@ -291,7 +435,7 @@ export default function ChatPage() {
 					Loading your chats...
 				</div>
 			) : <div className="mx-auto flex h-[calc(100vh-104px)] w-full max-w-6xl overflow-hidden border-y bg-card">
-				<aside className="flex w-full max-w-sm shrink-0 flex-col border-r md:w-[34%]">
+				<aside className="flex min-h-0 w-full max-w-sm shrink-0 flex-col border-r md:w-[34%]">
 					<div className="flex items-center gap-2 p-6">
 						<Input
 							aria-label="Search chats"
@@ -308,12 +452,12 @@ export default function ChatPage() {
 						</Button>
 					</div>
 
-					<div className="overflow-y-auto px-3 pb-4">
+					<div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
 						{filteredRooms.map((room) => (
 							<button
 								key={room.id}
 								type="button"
-								onClick={() => setSelectedRoom(room)}
+								onClick={() => void handleSelectRoom(room)}
 								className={`flex w-full cursor-pointer items-center gap-4 rounded-lg px-3 py-4 text-left transition-colors hover:bg-muted ${selectedRoom?.id === room.id ? "bg-muted" : ""}`}
 							>
 								<span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-base font-semibold">
@@ -324,7 +468,18 @@ export default function ChatPage() {
 										<span className="truncate text-base font-semibold">{room.name}</span>
 										<span className="shrink-0 text-xs text-muted-foreground">{room.time}</span>
 									</span>
-									<span className="mt-1 block truncate text-sm text-muted-foreground">{room.preview}</span>
+									<span className="mt-1 flex items-center justify-between gap-2">
+										<span className="block truncate text-sm text-muted-foreground">{room.preview}</span>
+										{room.unreadCount > 0 && (
+                                        <span
+                                            className={`flex h-5 shrink-0 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background ${
+                                            room.unreadCount < 10 ? "w-5" : "min-w-5 px-1.5"
+                                            }`}
+                                        >
+                                            {room.unreadCount}
+                                        </span>
+                                        )}
+									</span>
 								</span>
 							</button>
 						))}
@@ -332,17 +487,22 @@ export default function ChatPage() {
 					</div>
 				</aside>
 
-				<section className="hidden min-w-0 flex-1 flex-col md:flex">
+				<section className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
 					{selectedRoom ? (
 						<>
-							<div className="flex items-center gap-3 border-b px-8 py-5">
-								<span className="flex size-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">{selectedRoom.initials}</span>
-								<div>
-									<h1 className="font-semibold">{selectedRoom.name}</h1>
-									<p className="text-xs text-muted-foreground">Active conversation</p>
+							<div className="flex items-center justify-between gap-3 border-b px-8 py-5">
+								<div className="flex items-center gap-3">
+									<span className="flex size-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">{selectedRoom.initials}</span>
+									<div>
+										<h1 className="font-semibold">{selectedRoom.name}</h1>
+										<p className="text-xs text-muted-foreground">Active conversation</p>
+									</div>
 								</div>
+								<Button type="button" variant="ghost" size="icon" onClick={() => void handleDeleteConversation()} aria-label="Delete conversation" title="Delete conversation">
+									<Trash2 className="size-4" />
+								</Button>
 							</div>
-							<div className="flex flex-1 flex-col justify-end gap-3 overflow-y-auto bg-muted/30 p-8">
+							<div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-muted/30 p-8">
 								{isLoadingMessages && <p className="text-sm text-muted-foreground">Loading messages...</p>}
 								{!isLoadingMessages && visibleMessages.length === 0 && <p className="text-sm text-muted-foreground">Start a secure conversation with {selectedRoom.name}.</p>}
 								{visibleMessages.map((chatMessage, index) => {
@@ -350,12 +510,15 @@ export default function ChatPage() {
 									const isNewDate = !previousMessage || new Date(previousMessage.created_at).toDateString() !== new Date(chatMessage.created_at).toDateString();
 
 									return (
-										<div key={chatMessage.id} className="space-y-3">
+										<div key={chatMessage.id} className="shrink-0 space-y-3">
 											{isNewDate && <div className="py-3 text-center text-xs font-medium text-muted-foreground">{formatMessageDate(chatMessage.created_at)}</div>}
-											<div className={`flex ${String(chatMessage.sender_id) === String(userId) ? "justify-end" : "justify-start"}`}>
-												<div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow-sm ${String(chatMessage.sender_id) === String(userId) ? "bg-foreground text-background" : "bg-card"}`}>
-													{"text" in chatMessage ? chatMessage.text : "Encrypted message"}
-												</div>
+															<div className={`flex ${String(chatMessage.sender_id) === String(userId) ? "justify-end" : "justify-start"}`}>
+																<div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow-sm ${String(chatMessage.sender_id) === String(userId) ? "bg-foreground text-background" : "bg-card"}`}>
+																	<p className="whitespace-pre-wrap">{"text" in chatMessage ? chatMessage.text : "Encrypted message"}</p>
+																	<time className={`mt-2 block text-right text-[11px] ${String(chatMessage.sender_id) === String(userId) ? "text-background/70" : "text-muted-foreground"}`} dateTime={chatMessage.created_at}>
+																		{formatMessageTime(chatMessage.created_at)}
+																	</time>
+																</div>
 											</div>
 										</div>
 									);
@@ -437,6 +600,21 @@ export default function ChatPage() {
 							</Button>
 						</DialogFooter>
 					</form>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Delete conversation?</DialogTitle>
+						<DialogDescription>
+							This will remove the conversation with {selectedRoom?.name} from your conversation list.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button type="button" variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+						<Button type="button" onClick={() => void confirmDeleteConversation()}>Delete conversation</Button>
+					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</main>

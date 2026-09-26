@@ -6,11 +6,13 @@ export type Room = {
 	time: string;
 	publicKey?: JsonWebKey | string;
 	opponentId: string;
+	unreadCount: number;
 };
 
 export type Conversation = {
 	id: string;
 	created_at: string;
+	unread_count: number;
 	opponent: {
 		id: string;
 		name: string;
