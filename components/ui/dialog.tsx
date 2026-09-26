@@ -1,4 +1,6 @@
-import type { HTMLAttributes, ReactNode } from "react";
+"use client";
+
+import { useEffect, type HTMLAttributes, type ReactNode } from "react";
 
 type DialogProps = {
 	open: boolean;
@@ -6,7 +8,40 @@ type DialogProps = {
 	children: ReactNode;
 };
 
+let openDialogs = 0;
+
+/**
+ * Apakah ada dialog yang sedang terbuka.
+ *
+ * Dialog mengurus Escape-nya sendiri, tapi pintasan Escape milik halaman
+ * (misalnya "tutup room chat") juga terpasang di `window` dan ikut menyala.
+ * Halaman mengecek fungsi ini supaya satu tekanan Escape tidak menutup dialog
+ * sekaligus panel di belakangnya. Dihitung otomatis dari siklus hidup dialog,
+ * jadi menambah dialog baru tidak perlu mengubah halaman.
+ */
+export function isAnyDialogOpen() {
+	return openDialogs > 0;
+}
+
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
+	useEffect(() => {
+		if (!open) return;
+
+		openDialogs += 1;
+
+		function handleKeyDown(event: KeyboardEvent) {
+			if (event.key !== "Escape") return;
+			onOpenChange(false);
+		}
+
+		window.addEventListener("keydown", handleKeyDown);
+
+		return () => {
+			openDialogs -= 1;
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [open, onOpenChange]);
+
 	if (!open) return null;
 
 	return (

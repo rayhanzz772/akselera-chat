@@ -117,3 +117,25 @@ export async function decryptMessage(
 
 	return new TextDecoder().decode(plaintext);
 }
+
+/**
+ * Dekripsi sekumpulan pesan sekaligus.
+ *
+ * Pesan yang gagal didekripsi dikembalikan apa adanya (tanpa `text`) supaya UI
+ * bisa menampilkan fallback, dan kalau `privateKey` belum tersedia semuanya
+ * dikembalikan apa adanya.
+ */
+export async function decryptMessages<T extends EncryptedMessagePayload>(
+	payloads: T[],
+	privateKey: CryptoKey | null,
+): Promise<(T | (T & { text: string }))[]> {
+	return Promise.all(payloads.map(async (payload) => {
+		if (!privateKey) return payload;
+
+		try {
+			return { ...payload, text: await decryptMessage(payload, privateKey) };
+		} catch {
+			return payload;
+		}
+	}));
+}

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
+import { initialsFrom } from "@/lib/format/name";
 
 interface HeaderProps {
   isDark: boolean;
@@ -26,12 +27,7 @@ export function Header({ isDark, onThemeChange, userName, onLogout, className = 
         {userName && <span className="hidden text-sm font-medium sm:inline">{userName}</span>}
         {userName && (
           <span className="flex size-9 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-            {userName
-              .split(" ")
-              .map((part) => part[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()}
+            {initialsFrom(userName)}
           </span>
         )}
         <ModeToggle isDark={isDark} onToggle={onThemeChange} />
