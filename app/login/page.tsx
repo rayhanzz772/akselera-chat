@@ -1,15 +1,18 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/api/auth";
-import { createUserKeyMaterial } from "@/lib/crypto/user-keys";
+import { getCurrentUser } from "@/lib/api/auth";
+import { getEncryptedKeyMaterial, persistSessionKeys } from "@/lib/crypto/session";
+import { getPublicKeyFromPrivateKey, unlockPrivateKey } from "@/lib/crypto/user-keys";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -30,15 +33,27 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const keyMaterial = await createUserKeyMaterial(password);
       await loginUser({
         email: email.trim(),
         password,
-        ...keyMaterial,
       });
+    const user = await getCurrentUser();
+    const storedKeyMaterial = getEncryptedKeyMaterial(email.trim());
+    const encryptedPrivateKey = user.encrypted_private_key ?? storedKeyMaterial?.encryptedPrivateKey;
+    const keyDerivationSalt = user.key_derivation_salt ?? storedKeyMaterial?.keyDerivationSalt;
+	if (encryptedPrivateKey && keyDerivationSalt) {
+      const privateKey = await unlockPrivateKey(
+        password,
+        encryptedPrivateKey,
+        keyDerivationSalt,
+      );
+      await persistSessionKeys(privateKey, await getPublicKeyFromPrivateKey(privateKey));
+  } else {
+    throw new Error("Encrypted private key is unavailable. Please register this device again or update the /auth/me response.");
+    }
 
       setPassword("");
-      setSuccess("Login successful.");
+      router.replace("/chat");
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
@@ -99,7 +114,7 @@ export default function RegisterPage() {
             </form>
 
             <div className="mt-6 text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <a href="/register" className="font-medium text-foreground underline underline-offset-4">
                 Register
               </a>

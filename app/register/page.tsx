@@ -1,14 +1,17 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { registerUser } from "@/lib/api/auth";
 import { createUserKeyMaterial } from "@/lib/crypto/user-keys";
+import { saveEncryptedKeyMaterial } from "@/lib/crypto/session";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,9 +40,14 @@ export default function RegisterPage() {
         password,
         ...keyMaterial,
       });
+      saveEncryptedKeyMaterial(
+        email.trim(),
+        keyMaterial.encrypted_private_key,
+        keyMaterial.key_derivation_salt,
+      );
 
       setPassword("");
-      setSuccess("Account created successfully.");
+      router.replace("/login");
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
