@@ -18,6 +18,8 @@ export type Conversation = {
 		name: string;
 		email: string;
 		public_key?: JsonWebKey | string;
+		is_online?: boolean;
+		last_seen_at?: string | null;
 	};
 	last_message: {
 		id: string;
@@ -59,6 +61,8 @@ export type UserSummary = {
 	id: string;
 	name: string;
 	email: string;
+	is_online?: boolean;
+	last_seen_at?: string | null;
 };
 
 export type UsersResponse = {

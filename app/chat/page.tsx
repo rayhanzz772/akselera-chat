@@ -10,12 +10,13 @@ import { createMessage, getMessages, type LoadedMessage } from "@/lib/api/messag
 import { decryptMessage, encryptMessage } from "@/lib/crypto/messages";
 import { clearPrivateKey, getPrivateKey, getPublicKey, restoreSessionKeys, setPublicKey } from "@/lib/crypto/session";
 import { getPublicKeyFromPrivateKey } from "@/lib/crypto/user-keys";
+import { replacePresence, seedPresence, setPresence, type Presence } from "@/lib/presence/store";
 import { ArrowLeft, Contact, Trash2 } from "lucide-react";
 import { io, type Socket } from "socket.io-client";
 import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PresenceDot, PresenceLabel } from "@/components/ui/presence";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Conversation, DecryptedMessage, EncryptedMessage, Room, UserSummary } from "@/types/chat";
 
@@ -112,10 +113,17 @@ export default function ChatPage() {
 	const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 	const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 	const isNearBottomRef = useRef(true);
+	const userSocketRef = useRef<Socket | null>(null);
+	const isDialogOpen = isNewConversationOpen || isDeleteDialogOpen || isLogoutDialogOpen;
 
 	useEffect(() => {
 		Promise.all([getCurrentUser(), getConversations()])
 			.then(async ([user, response]) => {
+				// Semai presence dari REST SEBELUM socket tersambung. Kalau urutannya
+				// terbalik, `presence:update` yang lebih baru bisa tertimpa data REST
+				// yang lebih lama.
+				seedPresence(response.data.map((conversation) => conversation.opponent).filter(Boolean));
+
 				setUserName(user.name);
 				setUserId(user.id);
 				await restoreSessionKeys();
@@ -157,9 +165,23 @@ export default function ChatPage() {
 			auth: token ? { token } : undefined,
 			withCredentials: true,
 		});
+		userSocketRef.current = userSocket;
 
 		userSocket.on("connect_error", (error) => {
 			if (isCurrent) setMessageError(`Socket authentication failed: ${error.message}`);
+		});
+
+		// Server otomatis memasukkan socket ini ke room `user:<id>`, jadi event
+		// presence datang tanpa perlu `conversation:join`. Payload `presence:sync`
+		// otoritatif dan harus menimpa store, bukan digabung.
+		userSocket.on("presence:sync", (event: { presence?: Presence[] }) => {
+			if (!isCurrent || !Array.isArray(event?.presence)) return;
+			replacePresence(event.presence);
+		});
+
+		userSocket.on("presence:update", (presence: Presence) => {
+			if (!isCurrent || !presence?.user_id) return;
+			setPresence([presence]);
 		});
 
 		userSocket.on("conversation:updated", async (event: ConversationUpdatedEvent) => {
@@ -188,6 +210,7 @@ export default function ChatPage() {
 
 		return () => {
 			isCurrent = false;
+			userSocketRef.current = null;
 			userSocket.disconnect();
 		};
 	}, [userId]);
@@ -350,6 +373,21 @@ export default function ChatPage() {
 			container.scrollHeight - container.scrollTop - container.clientHeight < 80;
 	}
 
+	useEffect(() => {
+		if (!selectedRoom) return;
+
+		function handleKeyDown(event: KeyboardEvent) {
+			if (event.key !== "Escape") return;
+			// Biarkan dialog yang menangani Escape-nya sendiri.
+			if (isDialogOpen) return;
+
+			setSelectedRoom(null);
+		}
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [selectedRoom, isDialogOpen]);
+
 	async function handleSend(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		setMessageError("");
@@ -432,7 +470,22 @@ export default function ChatPage() {
 		setIsLoadingUsers(true);
 
 		try {
-			setUsers((await getUsers()).data);
+			const fetchedUsers = (await getUsers()).data;
+			setUsers(fetchedUsers);
+			seedPresence(fetchedUsers);
+
+			// `presence:sync` hanya mencakup lawan bicara di daftar conversation,
+			// jadi hasil pencarian user harus ditanyakan eksplisit.
+			const userIds = fetchedUsers.map((user) => String(user.id));
+			userSocketRef.current?.emit(
+				"presence:get",
+				userIds,
+				(response: { success?: boolean; presence?: Presence[] }) => {
+					if (response?.success && Array.isArray(response.presence)) {
+						setPresence(response.presence);
+					}
+				},
+			);
 		} catch (usersError) {
 			setConversationError(usersError instanceof Error ? usersError.message : "Users could not be loaded.");
 		} finally {
@@ -487,8 +540,9 @@ export default function ChatPage() {
 								onClick={() => void handleSelectRoom(room)}
 								className={`flex w-full cursor-pointer items-center gap-4 rounded-lg px-3 py-4 text-left transition-colors hover:bg-muted ${selectedRoom?.id === room.id ? "bg-muted" : ""}`}
 							>
-								<span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-base font-semibold">
+								<span className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-base font-semibold">
 									{room.initials}
+									<PresenceDot userId={room.opponentId} />
 								</span>
 								<span className="min-w-0 flex-1">
 									<span className="flex items-center justify-between gap-2">
@@ -522,10 +576,13 @@ export default function ChatPage() {
 									<Button type="button" variant="ghost" size="icon" className="md:hidden" onClick={() => setSelectedRoom(null)} aria-label="Back to conversations" title="Back to conversations">
 										<ArrowLeft className="size-4" />
 									</Button>
-									<span className="flex size-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">{selectedRoom.initials}</span>
+									<span className="relative flex size-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+										{selectedRoom.initials}
+										<PresenceDot userId={selectedRoom.opponentId} />
+									</span>
 									<div>
 										<h1 className="font-semibold">{selectedRoom.name}</h1>
-										<p className="text-xs text-muted-foreground">Active conversation</p>
+										<PresenceLabel userId={selectedRoom.opponentId} fallback="Active conversation" />
 									</div>
 								</div>
 								<Button type="button" variant="ghost" size="icon" onClick={() => void handleDeleteConversation()} aria-label="Delete conversation" title="Delete conversation">
@@ -548,7 +605,7 @@ export default function ChatPage() {
 											{isNewDate && <div className="py-3 text-center text-xs font-medium text-muted-foreground">{formatMessageDate(chatMessage.created_at)}</div>}
 															<div className={`flex ${String(chatMessage.sender_id) === String(userId) ? "justify-end" : "justify-start"}`}>
 																<div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow-sm ${String(chatMessage.sender_id) === String(userId) ? "bg-foreground text-background" : "bg-bubble"}`}>
-																	<p className="whitespace-pre-wrap">{"text" in chatMessage ? chatMessage.text : "Encrypted message"}</p>
+																	<p className="whitespace-pre-wrap wrap-anywhere">{"text" in chatMessage ? chatMessage.text : "Encrypted message"}</p>
 																	<time className={`mt-2 block text-right text-[11px] ${String(chatMessage.sender_id) === String(userId) ? "text-background/70" : "text-muted-foreground"}`} dateTime={chatMessage.created_at}>
 																		{formatMessageTime(chatMessage.created_at)}
 																	</time>
@@ -612,9 +669,15 @@ export default function ChatPage() {
 												setUserSearch(user.email);
 											}}
 										>
-											<span>
-												<span className="block font-medium">{user.name}</span>
-												<span className="block opacity-70">{user.email}</span>
+											<span className="flex items-center gap-2">
+												<span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+													{user.name.slice(0, 2).toUpperCase()}
+													<PresenceDot userId={user.id} className="size-2.5" />
+												</span>
+												<span className="min-w-0">
+													<span className="block truncate font-medium">{user.name}</span>
+													<span className="block truncate opacity-70">{user.email}</span>
+												</span>
 											</span>
 										</Button>
 									))}
