@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="public/assets/logo/white.png">
-  <img src="public/assets/logo/dark.png" alt="Akselera Tech" width="260">
+  <img src="public/assets/logo/dark.png" alt="Akselera Tech" width="320">
 </picture>
 
 # Akselera Chat
@@ -10,6 +10,7 @@
 **Aplikasi chat internal dengan enkripsi end-to-end di sisi klien.**
 Server menyimpan ciphertext. Kunci privat tidak pernah meninggalkan perangkat.
 
+[![Express.js](https://img.shields.io/badge/Express.js-4.18.2-000000?logo=express&logoColor=white)](https://expressjs.com)
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.6-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19.2.8-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -49,7 +50,7 @@ Akselera Chat terdiri dari dua bagian yang saling bergantung dan sengaja dibahas
 | ⚡ | Satu koneksi Socket.IO menghubungkan keduanya untuk pesan dan status online realtime |
 | 🎨 | Antarmuka monokrom dengan mode terang/gelap |
 
-> **Kenapa satu README, bukan dua.** Skema enkripsinya dirancang lintas lapisan: keputusan di frontend (Web Crypto API, secure context) menentukan syarat wajib di backend (HTTPS, skema penyimpanan wrapped key), dan sebaliknya kontrak Socket.IO di backend menentukan bagaimana frontend harus menangani reconnect. Membaca salah satu sisi saja akan membuat sebagian keputusan desain terlihat sewenang-wenang.
+> Skema enkripsinya dirancang lintas lapisan: keputusan di frontend (Web Crypto API, secure context) menentukan syarat wajib di backend (HTTPS, skema penyimpanan wrapped key), dan sebaliknya kontrak Socket.IO di backend menentukan bagaimana frontend harus menangani reconnect. Membaca salah satu sisi saja akan membuat sebagian keputusan desain terlihat sewenang-wenang.
 
 ---
 
@@ -266,7 +267,7 @@ Dokumentasi lengkap beserta contoh request/response tersedia di Swagger UI: `htt
 ### 1. Clone repositori Backend
 
 ```bash
-git clone https://github.com/rayhanzz772/akselera-chat-be.git
+git clone https://github.com/rayhanzz772/akselera-chat-fe.git
 cd akselera-chat-be
 ```
 
