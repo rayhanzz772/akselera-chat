@@ -15,7 +15,7 @@ interface HeaderProps {
 
 export function Header({ isDark, onThemeChange, userName, onLogout, className = "" }: HeaderProps) {
   return (
-    <header className={`mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between px-6 py-6 ${className}`}>
+    <header className={`mx-auto flex w-full shrink-0 items-center justify-between px-6 py-6 ${className}`}>
       <Image
         src={isDark ? "/assets/logo/white.png" : "/assets/logo/dark.png"}
         alt="Akselera Tech"

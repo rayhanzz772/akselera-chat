@@ -220,7 +220,7 @@ export default function ChatPage() {
 					Loading your chats...
 				</div>
 			) : (
-				<div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 overflow-hidden border-y bg-card">
+				<div className="mx-auto flex min-h-0 w-full flex-1 overflow-hidden border-y bg-card">
 					<ConversationList
 						rooms={rooms}
 						selectedRoomId={selectedRoom?.id}
