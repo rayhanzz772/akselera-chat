@@ -27,6 +27,22 @@ function formatConversationTime(value: string) {
 	return "Yesterday";
 }
 
+function formatMessageDate(value: string) {
+	const date = new Date(value);
+	const today = new Date();
+	const yesterday = new Date();
+	yesterday.setDate(today.getDate() - 1);
+
+	if (date.toDateString() === today.toDateString()) return "Today";
+	if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+
+	return date.toLocaleDateString(undefined, {
+		day: "numeric",
+		month: "long",
+		year: "numeric",
+	});
+}
+
 function mapConversation(conversation: Conversation): Room {
 	const name = conversation.opponent.name;
 
@@ -298,7 +314,7 @@ export default function ChatPage() {
 								key={room.id}
 								type="button"
 								onClick={() => setSelectedRoom(room)}
-								className={`flex w-full items-center gap-4 rounded-lg px-3 py-4 text-left transition-colors hover:bg-muted ${selectedRoom?.id === room.id ? "bg-muted" : ""}`}
+								className={`flex w-full cursor-pointer items-center gap-4 rounded-lg px-3 py-4 text-left transition-colors hover:bg-muted ${selectedRoom?.id === room.id ? "bg-muted" : ""}`}
 							>
 								<span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-base font-semibold">
 									{room.initials}
@@ -329,13 +345,21 @@ export default function ChatPage() {
 							<div className="flex flex-1 flex-col justify-end gap-3 overflow-y-auto bg-muted/30 p-8">
 								{isLoadingMessages && <p className="text-sm text-muted-foreground">Loading messages...</p>}
 								{!isLoadingMessages && visibleMessages.length === 0 && <p className="text-sm text-muted-foreground">Start a secure conversation with {selectedRoom.name}.</p>}
-								{visibleMessages.map((chatMessage) => (
-													<div key={chatMessage.id} className={`flex ${String(chatMessage.sender_id) === String(userId) ? "justify-end" : "justify-start"}`}>
-														<div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow-sm ${String(chatMessage.sender_id) === String(userId) ? "bg-foreground text-background" : "bg-card"}`}>
-															{"text" in chatMessage ? chatMessage.text : "Encrypted message"}
-														</div>
-													</div>
-								))}
+								{visibleMessages.map((chatMessage, index) => {
+									const previousMessage = visibleMessages[index - 1];
+									const isNewDate = !previousMessage || new Date(previousMessage.created_at).toDateString() !== new Date(chatMessage.created_at).toDateString();
+
+									return (
+										<div key={chatMessage.id} className="space-y-3">
+											{isNewDate && <div className="py-3 text-center text-xs font-medium text-muted-foreground">{formatMessageDate(chatMessage.created_at)}</div>}
+											<div className={`flex ${String(chatMessage.sender_id) === String(userId) ? "justify-end" : "justify-start"}`}>
+												<div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow-sm ${String(chatMessage.sender_id) === String(userId) ? "bg-foreground text-background" : "bg-card"}`}>
+													{"text" in chatMessage ? chatMessage.text : "Encrypted message"}
+												</div>
+											</div>
+										</div>
+									);
+								})}
 							</div>
 							<form onSubmit={handleSend} className="flex gap-3 border-t p-5">
 								{messageError && <p className="absolute -mt-12 text-sm text-destructive">{messageError}</p>}
