@@ -271,7 +271,7 @@ git clone https://github.com/rayhanzz772/akselera-chat-fe.git
 cd akselera-chat-be
 ```
 
-### 2. Jalankan backend
+### 2. Jalankan Backend
 
 ```bash
 npm install
@@ -293,11 +293,11 @@ npm run dev
 
 Backend berjalan di `http://localhost:8000`, Socket.IO menempel di path yang sama.
 
-### 3. Clone repository frontend
+### 3. Clone repository Frontend
 
 ```bash
-git clone https://github.com/rayhanzz772/akselera-chat-be.git
-cd akselera-chat-be
+git clone https://github.com/rayhanzz772/akselera-chat-fe.git
+cd akselera-chat-fe
 ```
 
 ### 4. Jalankan Frontend
