@@ -5,7 +5,7 @@
   <img src="public/assets/logo/dark.png" alt="Akselera Tech" width="260">
 </picture>
 
-# Akselera Chat — Frontend
+# Akselera Chat
 
 **Aplikasi chat internal dengan enkripsi end-to-end di sisi klien.**
 Server menyimpan ciphertext. Kunci privat tidak pernah meninggalkan perangkat.
@@ -29,8 +29,8 @@ Server menyimpan ciphertext. Kunci privat tidak pernah meninggalkan perangkat.
 - [Keamanan dan Enkripsi](#-keamanan-dan-enkripsi)
 - [Alur Utama](#-alur-utama)
 - [Kontrak API](#-kontrak-api)
+- [Event Socket.IO](#-event-socketio)
 - [Menjalankan Secara Lokal](#-menjalankan-secara-lokal)
-- [AI Tools yang Dipakai](#-ai-tools-yang-dipakai)
 - [Yang Belum Selesai](#-yang-belum-selesai)
 - [Catatan Sebelum Production](#-catatan-sebelum-production)
 
@@ -38,18 +38,18 @@ Server menyimpan ciphertext. Kunci privat tidak pernah meninggalkan perangkat.
 
 ## 🔭 Sekilas
 
-Frontend ini adalah sisi klien dari Akselera Chat. Tanggung jawabnya:
+Backend ini adalah sisi server dari Akselera Chat. Tanggung jawabnya:
 
 | | |
 |---|---|
-| 🔑 | Register, login, dan pembuatan key pair RSA per pengguna |
-| 🔒 | **Enkripsi pesan di browser sebelum dikirim** — server tidak pernah melihat plaintext |
-| 🔓 | Dekripsi di browser menggunakan kunci privat yang tersimpan lokal |
-| 💬 | Daftar percakapan, unread count, pencarian, dan pembuatan percakapan |
-| ⚡ | Pesan realtime lewat satu koneksi Socket.IO |
-| 🎨 | Antarmuka monokrom dengan mode terang/gelap |
+| 🔑 | Register, login, dan penyimpanan kunci publik RSA per pengguna |
+| 🙈 | **Tidak pernah melihat plaintext** — hanya menyimpan dan meneruskan ciphertext |
+| 📬 | Menyimpan riwayat percakapan dan pesan dalam bentuk terenkripsi |
+| ⚡ | Meneruskan pesan realtime lewat Socket.IO |
+| 👤 | Melacak status online / "terakhir dilihat" per pengguna |
+| 🔐 | Verifikasi password dengan Argon2id, penerbitan JWT |
 
-> **Catatan tentang password.** Password dikirim sebagai plaintext melalui HTTPS karena hanya backend yang boleh memverifikasinya. Hashing (Argon2id) dan penyimpanan hash sepenuhnya menjadi tanggung jawab backend. Frontend tidak pernah menyimpan password.
+> **Catatan tentang enkripsi.** Semua enkripsi dan dekripsi pesan terjadi di klien (browser), bukan di sini. Backend hanya menyimpan ciphertext, kunci AES yang sudah dibungkus (*wrapped key*), dan kunci publik RSA milik tiap pengguna. Kalau database ini bocor, isi pesan tetap tidak terbaca tanpa kunci privat milik pengguna, yang tidak pernah dikirim ke server.
 
 ---
 
@@ -59,35 +59,41 @@ Frontend ini adalah sisi klien dari Akselera Chat. Tanggung jawabnya:
 <summary><b>Autentikasi</b></summary>
 
 - Register dengan nama, email, dan password
-- Pembuatan key pair RSA-OAEP 4096-bit saat register
-- Kunci privat dienkripsi dengan password sebelum disimpan
-- Login lewat `/auth/login`, lalu redirect otomatis ke `/chat`
-- Logout menghapus kunci dari memori dan IndexedDB
-- Redirect ke `/login` bila sesi tidak valid
+- Password di-hash dengan Argon2id sebelum disimpan — plaintext password tidak pernah masuk log atau database
+- Penyimpanan kunci publik RSA-OAEP milik pengguna saat register
+- Login lewat `/auth/login`, mengembalikan access token JWT
+- Endpoint `/auth/me` untuk validasi sesi
+- Rate limiting pada endpoint login untuk mencegah brute force
 
 </details>
 
 <details>
 <summary><b>Percakapan</b></summary>
 
-- Daftar percakapan beserta unread count
-- Pencarian percakapan secara lokal (tanpa request tambahan)
-- Membuat percakapan baru lewat dialog, dengan pencarian pengguna via `/users`
-- Hapus percakapan dan tandai sudah dibaca
-- Percakapan dengan pesan terbaru naik ke posisi teratas secara realtime
-- Status online / "terakhir dilihat" per lawan bicara
+- Membuat, mengambil daftar, dan menghapus percakapan
+- Unread count dihitung per percakapan per pengguna
+- Pencarian pengguna lewat `/users` untuk memulai percakapan baru
+- Broadcast `conversation:updated` setiap ada pesan baru, supaya sidebar klien ikut naik urutannya
 
 </details>
 
 <details>
 <summary><b>Pesan</b></summary>
 
-- Riwayat pesan per percakapan
-- Enkripsi sebelum dikirim; dekripsi di browser
-- Gelembung pesan berbeda posisi dan warna untuk pengirim dan penerima
-- Pemisah tanggal: `Hari ini`, `Kemarin`, atau tanggal lengkap
-- Pesan baru masuk realtime tanpa reload
-- Panel pesan otomatis menggulir ke bawah, tapi tidak memaksa kalau pengguna sedang membaca ke atas
+- Penyimpanan pesan dalam bentuk ciphertext AES-GCM
+- Penyimpanan dua salinan *wrapped key* per pesan — satu untuk penerima, satu untuk pengirim
+- Riwayat pesan per percakapan dengan pagination
+- Broadcast `message:new` ke room percakapan yang relevan
+- Penandaan pesan sebagai sudah dibaca
+
+</details>
+
+<details>
+<summary><b>Realtime & Presence</b></summary>
+
+- Satu koneksi Socket.IO per klien, diautentikasi lewat JWT saat handshake
+- Room per percakapan (`conversation:join` / `conversation:leave`)
+- Broadcast status online dan "terakhir dilihat" ke lawan bicara
 
 </details>
 
@@ -97,267 +103,124 @@ Frontend ini adalah sisi klien dari Akselera Chat. Tanggung jawabnya:
 
 ### Ringkasan
 
-| Lapisan | Pilihan | Versi | Alasan utama |
-|---|---|---|---|
-| Framework | **Next.js** (App Router) | 16.3.6 | Routing, bundling, dan metadata siap pakai tanpa konfigurasi manual |
-| Bahasa | **TypeScript** (strict) | 5.9.3 | Kontrak data dipakai lintas lapisan; kesalahan bentuk data tertangkap saat compile |
-| UI | **React** | 19.2.8 | `ref` sebagai prop biasa — tidak perlu `forwardRef` lagi |
-| Styling | **Tailwind CSS** | 4.3.3 | Token tema di CSS, bukan di JavaScript; mode gelap cukup menukar nilai variabel |
-| Ikon | **lucide-react** | 1.48 | Ringan, konsisten, dan bisa di-*tree-shake* |
-| Realtime | **socket.io-client** | 4.8.4 | Reconnect otomatis dan semantik room bawaan |
-| Kriptografi | **Web Crypto API** | native | Tidak menambah bundle dan tidak perlu mengaudit library kripto pihak ketiga |
+| Lapisan | Pilihan | Alasan utama |
+|---|---|---|
+| Framework | **Express.js** | Minim, matang, dan cukup untuk REST API + jembatan ke server Socket.IO tanpa banyak *boilerplate* |
+| Realtime | **Socket.IO** | Reconnect otomatis dan semantik room bawaan, protokolnya sudah disepakati dengan frontend |
+| Database | **PostgreSQL** | Relasi antar pengguna, percakapan, dan pesan jelas dan butuh transaksi yang konsisten |
+| Cache & Adapter | **Redis** | Socket.IO adapter untuk *scaling* horizontal, plus cache status online |
+| Hashing Password | **Argon2id** | Pemenang password hashing competition, tahan terhadap serangan GPU/ASIC lebih baik dari bcrypt |
+| Autentikasi | **JWT** | Stateless, cocok dipasangkan dengan banyak instance server di belakang load balancer |
+| Validasi Skema | **Zod** | Kontrak request/response tervalidasi di runtime, bukan cuma di TypeScript saat compile |
 
 ### Alasan yang lebih detail
 
 <details>
-<summary><b>Kenapa Next.js App Router</b></summary>
+<summary><b>Kenapa Express.js, bukan framework lain</b></summary>
 
-Proyek ini butuh routing dan titik masuk server tanpa menulis server terpisah. Karena ini proyek baru — tidak ada kode lama yang harus dimigrasikan — konvensi App Router bisa dipakai langsung.
+Proyek ini butuh REST API yang bisa berbagi HTTP server yang sama dengan Socket.IO — keduanya memang didesain untuk hidup berdampingan di atas server `http` Node.js yang sama. Express cukup tipis untuk itu, tanpa memaksakan konvensi routing yang harus disesuaikan hanya supaya bisa "menumpangkan" WebSocket di port yang sama.
 
-Praktiknya: halaman chat dan autentikasi ditandai `"use client"` karena seluruhnya interaktif, sementara `app/layout.tsx` tetap server component untuk menangani metadata dan pemuatan font.
-
-</details>
-
-<details>
-<summary><b>Kenapa Web Crypto API, bukan library kripto</b></summary>
-
-`crypto.subtle` sudah menyediakan RSA-OAEP dan AES-GCM secara native di browser. Memilih ini berarti:
-
-- **Nol byte tambahan** pada bundle untuk fungsionalitas kripto
-- **Tidak ada library pihak ketiga yang perlu diaudit** — permukaan serangan berkurang
-- Operasi berat berjalan di kode native, bukan JavaScript
-
-**Trade-off yang disadari:** API-nya low-level (banyak detail harus diurus sendiri) dan `SubtleCrypto` hanya tersedia di *secure context*. Artinya aplikasi **tidak bisa berjalan di HTTP biasa** selain `localhost`. Ini alasan `npm run dev` tetap berfungsi tanpa HTTPS, tapi deployment wajib HTTPS.
+Praktiknya: `http.createServer(app)` dibuat sekali, lalu dipakai baik oleh Express maupun oleh instance Socket.IO.
 
 </details>
 
 <details>
-<summary><b>Kenapa envelope encryption RSA + AES</b></summary>
+<summary><b>Kenapa backend tidak pernah menyimpan atau melihat plaintext</b></summary>
 
-RSA-OAEP hanya praktis untuk payload kecil, sementara pesan bisa panjang. Jadi setiap pesan memakai pola standar **envelope encryption**:
+Backend ini sengaja dirancang buta terhadap isi pesan. Yang disimpan di database hanya:
 
-1. Kunci AES-GCM 256-bit dibuat sekali pakai untuk pesan itu
-2. Pesan dienkripsi dengan kunci AES tersebut
-3. Kunci AES dibungkus dengan RSA-OAEP
+1. **Ciphertext AES-GCM** dari isi pesan
+2. **Wrapped key** — kunci AES sekali pakai yang sudah dibungkus RSA-OAEP, disimpan dua kali (untuk pengirim dan penerima)
+3. **Kunci publik RSA** milik tiap pengguna, dipakai klien lain untuk membungkus kunci AES saat mengirim pesan ke pengguna tersebut
 
-**Kunci AES dibungkus dua kali** — untuk penerima *dan* untuk pengirim. Tanpa pembungkusan untuk pengirim, pengirim tidak akan bisa membaca pesannya sendiri setelah reload, karena kunci AES sekali pakai itu tidak disimpan di mana pun. Ini juga menjaga agar tidak ada plaintext yang perlu dititipkan di klien.
-
-</details>
-
-<details>
-<summary><b>Kenapa Socket.IO</b></summary>
-
-WebSocket mentah tidak punya reconnect otomatis, dan SSE tidak mendukung pengiriman dua arah. Socket.IO memberi keduanya plus semantik room, yang persis dibutuhkan: satu socket menerima `message:new` untuk room yang sedang dibuka, dan `conversation:updated` untuk memperbarui sidebar.
-
-Backend juga memakai Socket.IO, jadi protokolnya sudah sepakat.
-
-**Konsekuensi yang harus diingat:** reconnect otomatis berarti `conversation:join` harus di-emit ulang setiap kali event `connect` menyala — bukan hanya sekali saat socket dibuat.
+Server tidak pernah menyimpan atau menerima kunci privat siapa pun. Ini konsekuensi langsung dari skema *envelope encryption* yang dipakai di sisi klien — backend hanya perlu jadi tempat penyimpanan dan jalur distribusi, bukan pihak yang perlu dipercaya untuk menjaga rahasia isi pesan.
 
 </details>
 
 <details>
-<summary><b>Kenapa IndexedDB untuk kunci, sessionStorage untuk token</b></summary>
+<summary><b>Kenapa Socket.IO, bukan WebSocket mentah</b></summary>
 
-Objek `CryptoKey` **tidak bisa diserialisasi ke JSON**, jadi `localStorage` tidak bisa menyimpannya. IndexedDB bisa, karena memakai *structured clone* yang mendukung tipe native seperti `CryptoKey`. Ini yang memungkinkan pengguna me-refresh halaman tanpa harus memasukkan password lagi.
+WebSocket mentah tidak punya reconnect otomatis atau fallback transport. Socket.IO memberi keduanya, plus semantik room yang langsung dipakai untuk memisahkan broadcast per percakapan (`message:new`) dari broadcast global (`conversation:updated`, status online).
 
-Token akses disimpan di `sessionStorage`, bukan `localStorage`, supaya sesi berakhir saat tab ditutup. Pada perangkat yang dipakai bergantian, ini memperkecil jendela pencurian token.
+**Konsekuensi yang harus diingat:** setiap koneksi harus diautentikasi ulang lewat JWT saat handshake, dan klien wajib mengirim ulang `conversation:join` setiap kali event `connect` menyala — bukan hanya sekali saat socket dibuat.
 
 </details>
 
-### Infrastruktur
+<details>
+<summary><b>Kenapa Redis untuk adapter Socket.IO</b></summary>
 
-```mermaid
-flowchart LR
-    subgraph Client["🖥️ Browser"]
-        UI["Next.js App<br/>(React)"]
-        WC["Web Crypto API"]
-        IDB[("IndexedDB<br/>CryptoKey")]
-        SES[("sessionStorage<br/>JWT")]
-    end
+Begitu server Socket.IO perlu berjalan di lebih dari satu instance (di belakang load balancer), broadcast ke room tertentu harus disebarkan lintas instance. `@socket.io/redis-adapter` menyelesaikan ini dengan pub/sub Redis, tanpa perlu *sticky session* yang kaku di layer load balancer.
 
-    subgraph Server["☁️ Backend (repo terpisah)"]
-        REST["REST API<br/>:8001/api/v1"]
-        WS["Socket.IO<br/>:8001"]
-        DB[("PostgreSQL")]
-    end
+Redis yang sama juga dipakai untuk menyimpan status online, karena sifatnya *ephemeral* dan butuh TTL — cocok dibanding menulis ke PostgreSQL setiap kali status berubah.
 
-    UI -->|HTTP| REST
-    UI <-->|WebSocket| WS
-    UI --> WC
-    WC --> IDB
-    UI --> SES
-    REST --> DB
-    WS --> DB
+</details>
 
-    style Client fill:#f5f5f5,stroke:#999
-    style Server fill:#eef2ff,stroke:#6366f1
-```
+<details>
+<summary><b>Kenapa Argon2id, bukan bcrypt</b></summary>
 
-| Komponen | Peran |
-|---|---|
-| Frontend (repo ini) | Antarmuka, enkripsi/dekripsi, penyimpanan kunci |
-| Backend (repo terpisah) | Autentikasi, penyimpanan ciphertext, siaran realtime |
-| PostgreSQL | Disimpan di balik backend; **tidak diakses langsung oleh frontend** |
-| IndexedDB | Menyimpan objek `CryptoKey` milik pengguna |
-| sessionStorage | Menyimpan token akses |
-| localStorage | Menyimpan kunci privat terenkripsi + salt, per alamat email |
+Argon2id adalah pemenang Password Hashing Competition dan dirancang tahan terhadap serangan menggunakan GPU/ASIC, sesuatu yang jadi kelemahan bcrypt di dunia modern. Password dikirim sebagai plaintext lewat HTTPS dari klien (bukan tanggung jawab frontend untuk hashing), dan baru di-hash di sini sebelum disimpan.
+
+</details>
 
 ---
 
 ## 🏗 Arsitektur
 
-```mermaid
-flowchart TD
-    subgraph P["1 · Presentation"]
-        P1["app/ — halaman App Router"]
-        P2["components/ui/ — primitif"]
-        P3["components/chat/ — komponen chat"]
-    end
-    subgraph L["2 · Domain"]
-        L1["lib/chat/ — state & socket"]
-        L2["lib/format/ — pemformatan"]
-        L3["lib/presence/ — store presence"]
-    end
-    subgraph A["3 · Akses Data"]
-        A1["lib/api/client.ts — fetch + auth"]
-        A2["lib/api/* — modul per domain"]
-        A3["lib/crypto/* — kripto"]
-    end
-    T["4 · types/chat.ts — kontrak bersama"]
-
-    P --> L --> A
-    A --> T
-    L --> T
-    P --> T
+```
+┌─────────────┐        HTTPS (REST)         ┌──────────────────┐
+│             │ ───────────────────────────▶│                  │
+│   Klien     │                              │   Express.js     │
+│  (Browser)  │◀─────────────────────────────│   (REST API)     │
+│             │                              │                  │
+│             │        WSS (Socket.IO)       │  ┌────────────┐  │
+│             │ ───────────────────────────▶│  │ Socket.IO   │  │
+│             │◀─────────────────────────────│  │  Server     │  │
+└─────────────┘                              │  └─────┬──────┘  │
+                                              │        │         │
+                                              └────────┼─────────┘
+                                                        │
+                                        ┌───────────────┼───────────────┐
+                                        ▼                               ▼
+                                 ┌─────────────┐               ┌───────────────┐
+                                 │ PostgreSQL  │               │     Redis     │
+                                 │ (data utama)│               │ (adapter +    │
+                                 │             │               │  presence)    │
+                                 └─────────────┘               └───────────────┘
 ```
 
-### Struktur Folder
-
-```text
-app/
-  layout.tsx                    # Root layout, font, metadata, favicon
-  globals.css                   # Token tema monokrom (light/dark)
-  page.tsx                      # Redirect ke /login
-  login/page.tsx                # Login + pembukaan kunci privat
-  register/page.tsx             # Registrasi + pembuatan key pair
-  chat/page.tsx                 # Halaman chat (orkestrasi)
-
-components/
-  ui/                           # Primitif presentasional
-    button.tsx  card.tsx  input.tsx  mode-toggle.tsx
-    dialog.tsx                  # Dialog + pelacak dialog terbuka
-    confirm-dialog.tsx          # Dialog konfirmasi generik
-    header.tsx                  # Logo, tema, profil, logout
-    presence.tsx                # Titik status online + label
-  chat/                         # Komponen khusus chat
-    chat-panel.tsx              # Header room + daftar pesan + composer
-    conversation-list.tsx       # Sidebar + pencarian
-    message-list.tsx            # Daftar pesan + seluruh perilaku gulir
-    message-composer.tsx        # Input + tombol kirim
-    new-conversation-dialog.tsx # Dialog pencarian & pembuatan percakapan
-
-lib/
-  api/                          # Semua lalu lintas HTTP
-    client.ts  auth.ts  users.ts  conversations.ts  messages.ts
-  chat/                         # State dan realtime
-    rooms.ts                    # Pemetaan & pembaruan room
-    messages.ts                 # Pesan per percakapan
-    use-chat-socket.ts          # Satu koneksi Socket.IO
-    use-chat-bootstrap.ts       # Pemuatan awal halaman
-  crypto/
-    user-keys.ts                # Pembuatan kunci & pembukaan kunci privat
-    messages.ts                 # Enkripsi/dekripsi envelope
-    session.ts                  # Sesi kunci (memori + IndexedDB)
-  format/
-    datetime.ts                 # Format waktu percakapan & pesan
-    name.ts                     # Inisial dari nama
-  presence/
-    store.ts                    # Store presence + hook usePresence
-
-types/
-  chat.ts                       # Conversation, message, user, room
-
-public/assets/logo/
-  dark.png  white.png  favicon.png
-```
-
-### Prinsip yang dipakai
-
-1. **Halaman mengorkestrasi, komponen menyajikan.** `app/chat/page.tsx` mengatur state dan efek; komponen di `components/chat/` menerima props dan tidak tahu dari mana datanya berasal.
-2. **Logika murni keluar dari komponen.** Pemetaan dan pembaruan room ada di `lib/chat/rooms.ts` sebagai fungsi murni, sehingga bisa dibaca tanpa menelusuri JSX.
-3. **Satu koneksi realtime.** Seluruh event Socket.IO ditangani satu hook, bukan beberapa socket terpisah.
-4. **Nol warna literal di komponen.** Warna hanya lewat token tema di `globals.css`.
+Semua ciphertext, wrapped key, dan kunci publik disimpan di PostgreSQL. Redis tidak pernah menyimpan isi pesan — hanya dipakai untuk koordinasi antar instance dan status online.
 
 ---
 
 ## 🔐 Keamanan dan Enkripsi
 
+Skema kriptografi ini **diwarisi dari frontend** dan backend dirancang mengikuti kontrak yang sama, bukan mendiktenya:
+
 <details open>
-<summary><b>Key pair pengguna</b></summary>
+<summary><b>Envelope encryption RSA + AES</b></summary>
 
-Saat register, frontend membuat key pair:
+1. Klien membuat kunci AES-GCM 256-bit sekali pakai untuk tiap pesan
+2. Klien mengenkripsi isi pesan dengan kunci AES tersebut
+3. Klien membungkus kunci AES dengan RSA-OAEP milik penerima **dan** milik pengirim sendiri
+4. Backend menerima ciphertext + dua wrapped key, lalu menyimpannya apa adanya
 
-```ts
-{
-  name: "RSA-OAEP",
-  modulusLength: 4096,
-  publicExponent: new Uint8Array([1, 0, 1]),
-  hash: "SHA-256"
-}
-```
-
-Kunci privat tidak pernah dikirim sebagai plaintext. Kunci diekspor dalam format PKCS#8, lalu dienkripsi dengan:
-
-| Parameter | Nilai |
-|---|---|
-| Algoritma | AES-GCM 256-bit |
-| Derivasi kunci | PBKDF2 |
-| Hash | SHA-256 |
-| Salt | Acak, 16 byte |
-| IV | Acak, 12 byte |
-| Iterasi | 600.000 |
-
-Hasilnya (kunci terenkripsi + salt) disimpan di `localStorage` dengan kunci per alamat email.
+Backend tidak pernah melakukan operasi kriptografi apa pun — semua dilakukan Web Crypto API di browser. Peran backend murni sebagai penyimpan dan distributor.
 
 </details>
 
 <details>
-<summary><b>Envelope pesan</b></summary>
+<summary><b>Kenapa HTTPS wajib di production</b></summary>
 
-Setiap pesan memakai envelope hybrid:
-
-```json
-{
-  "algorithm": "AES-GCM",
-  "wrapped_keys": {
-    "recipient": "base64-rsa-wrapped-aes-key",
-    "sender": "base64-rsa-wrapped-aes-key"
-  },
-  "ciphertext": "base64-message-ciphertext"
-}
-```
-
-Yang dikirim ke backend hanya tiga field — server tidak pernah menerima kunci:
-
-```json
-{ "ciphertext": "...", "iv": "...", "auth_tag": "..." }
-```
-
-Dekoder masih menerima format lama dengan field tunggal `wrapped_key` untuk kompatibilitas.
+`SubtleCrypto` di klien hanya tersedia di *secure context* (HTTPS atau `localhost`). Kalau backend disajikan lewat HTTP biasa di production, klien tidak akan bisa menjalankan operasi enkripsinya sama sekali — jadi HTTPS di sini bukan sekadar rekomendasi keamanan umum, tapi syarat fungsional.
 
 </details>
 
 <details>
-<summary><b>Di mana data disimpan</b></summary>
+<summary><b>Yang backend TIDAK boleh lakukan</b></summary>
 
-| Lokasi | Isi | Umur |
-|---|---|---|
-| Memori | `CryptoKey` aktif | Sampai tab ditutup |
-| IndexedDB | `CryptoKey` (structured clone) | Sampai logout |
-| sessionStorage | Token akses | Sampai tab ditutup |
-| localStorage | Kunci privat terenkripsi + salt | Sampai dihapus manual |
-
-Password plaintext **tidak pernah disimpan** di mana pun.
+- Tidak boleh melakukan logging isi pesan mentah (ciphertext boleh, tapi tetap dijaga agar tidak bocor ke log pihak ketiga)
+- Tidak boleh menyimpan atau menerima kunci privat pengguna dalam bentuk apa pun
+- Tidak boleh mendekripsi pesan "untuk keperluan moderasi" — arsitektur ini secara sengaja tidak mendukung moderasi konten sisi server
 
 </details>
 
@@ -365,62 +228,97 @@ Password plaintext **tidak pernah disimpan** di mana pun.
 
 ## 🔄 Alur Utama
 
-<details>
-<summary><b>Register</b></summary>
+1. Pengguna register → password di-hash Argon2id → kunci publik RSA disimpan
+2. Pengguna login → password diverifikasi → JWT diterbitkan
+3. Klien membuka koneksi Socket.IO, JWT dikirim saat handshake
+4. Klien mengambil kunci publik lawan bicara lewat `/users/:id/public-key`
+5. Klien mengenkripsi pesan (AES-GCM + dua wrapped key RSA-OAEP), lalu POST ke `/messages`
+6. Backend menyimpan pesan, meng-update `unread_count`, lalu broadcast `message:new` dan `conversation:updated` ke room terkait
+7. Klien penerima mendekripsi pesan secara lokal dengan kunci privatnya
 
-```mermaid
-sequenceDiagram
-    participant U as Pengguna
-    participant FE as Frontend
-    participant API as Backend
+---
 
-    U->>FE: nama, email, password
-    FE->>FE: Buat key pair RSA-OAEP 4096
-    FE->>FE: Enkripsi kunci privat (PBKDF2 + AES-GCM)
-    FE->>FE: Simpan kunci terenkripsi + salt ke localStorage
-    FE->>API: POST /auth/register
-    API-->>FE: Berhasil
-    FE-->>U: Redirect ke /login
-```
+## 📡 Kontrak API
 
-</details>
+| Method | Endpoint | Deskripsi |
+|---|---|---|
+| `POST` | `/auth/register` | Registrasi pengguna baru + kunci publik RSA |
+| `POST` | `/auth/login` | Login, mengembalikan JWT |
+| `GET` | `/auth/me` | Validasi sesi saat ini |
+| `GET` | `/users?q=` | Cari pengguna untuk memulai percakapan |
+| `GET` | `/users/:id/public-key` | Ambil kunci publik RSA milik pengguna |
+| `GET` | `/conversations` | Daftar percakapan milik pengguna |
+| `POST` | `/conversations` | Buat percakapan baru |
+| `DELETE` | `/conversations/:id` | Hapus percakapan |
+| `GET` | `/conversations/:id/messages` | Riwayat pesan (paginated) |
+| `POST` | `/messages` | Kirim pesan (ciphertext + wrapped keys) |
+| `PATCH` | `/conversations/:id/read` | Tandai percakapan sudah dibaca |
 
-<details>
-<summary><b>Login</b></summary>
+Dokumentasi lengkap beserta contoh request/response tersedia di Swagger UI: `http://localhost:8000/api/docs`.
 
-1. Frontend mengirim email dan password ke `/auth/login` melalui HTTPS
-2. Backend memverifikasi dengan Argon2id
-3. Frontend mengambil data pengguna dari `/auth/me`
-4. Kunci privat terenkripsi diambil dari backend atau dari `localStorage`
-5. Password dipakai membuka kunci privat (PBKDF2 → AES-GCM)
-6. `CryptoKey` disimpan di memori dan IndexedDB agar tahan refresh
-7. Pengguna diarahkan ke `/chat`
+---
 
-</details>
+## ⚡ Event Socket.IO
 
-<details>
-<summary><b>Mengirim pesan</b></summary>
+| Event | Arah | Deskripsi |
+|---|---|---|
+| `conversation:join` | Klien → Server | Bergabung ke room sebuah percakapan |
+| `conversation:leave` | Klien → Server | Keluar dari room percakapan |
+| `message:new` | Server → Klien | Pesan baru masuk ke percakapan yang sedang dibuka |
+| `conversation:updated` | Server → Klien | Ada aktivitas baru di sebuah percakapan (untuk update sidebar) |
+| `presence:online` | Server → Klien | Lawan bicara berubah status online/offline |
 
-1. Pengguna mengetik plaintext
-2. Frontend membuat kunci AES-GCM sekali pakai
-3. Plaintext dienkripsi dengan kunci AES tersebut
-4. Kunci AES dibungkus RSA-OAEP dua kali — untuk penerima dan pengirim
-5. `ciphertext`, `iv`, dan `auth_tag` dikirim lewat REST
-6. Backend menyimpan dan menyiarkan `message:new` serta `conversation:updated`
+---
 
-</details>
+## 🚀 Menjalankan Secara Lokal
 
-<details>
-<summary><b>Membuka percakapan</b></summary>
+1. **Clone dan install dependencies:**
+   ```bash
+   git clone https://github.com/username/akselera-chat-backend.git
+   cd akselera-chat-backend
+   npm install
+   ```
 
-1. `GET /conversations` untuk daftar percakapan
-2. Preview diambil dari `last_message` yang sudah ikut di respons — **tanpa request tambahan per percakapan**
-3. Saat room dibuka: `PATCH /conversations/:id/read`, lalu `GET /conversations/:id/messages`
-4. Setiap pesan didekripsi dengan kunci privat di browser
-5. `conversation:join` di-emit agar pesan baru untuk room itu mulai disiarkan
+2. **Konfigurasi environment:**
+   ```bash
+   cp .env.example .env
+   ```
 
-</details>
+   ```env
+   PORT=8000
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/akselera_chat
+   REDIS_URL=redis://localhost:6379
+   JWT_SECRET=ganti_dengan_secret_yang_kuat
+   JWT_EXPIRES_IN=1d
+   ```
 
+3. **Jalankan migrasi database:**
+   ```bash
+   npm run migrate
+   ```
+
+4. **Jalankan server:**
+   ```bash
+   npm run dev
+   ```
+   Server berjalan di `http://localhost:8000`, Socket.IO menempel di path yang sama.
+
+---
+
+## 🚧 Yang Belum Selesai
+
+- Penghapusan pesan (soft delete) belum diimplementasi
+- Belum ada mekanisme rotasi kunci RSA bila kunci privat pengguna hilang
+- Rate limiting baru diterapkan di endpoint login, belum di endpoint pengiriman pesan
+
+---
+
+## ⚠️ Catatan Sebelum Production
+
+- **Wajib HTTPS** — tanpa ini, `SubtleCrypto` di klien tidak akan berfungsi sama sekali
+- Pastikan `JWT_SECRET` diganti dan tidak pernah di-commit ke repository
+- Redis adapter perlu dikonfigurasi bila server dijalankan lebih dari satu instance
+- Backup database perlu memperhitungkan bahwa data yang dicadangkan tetap terenkripsi — kehilangan kunci privat pengguna berarti kehilangan akses ke pesan lama secara permanen, backup tidak bisa menolong ini
 ---
 
 ## 📡 Kontrak API
