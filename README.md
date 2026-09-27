@@ -67,7 +67,7 @@ Akselera Chat terdiri dari dua bagian yang saling bergantung dan sengaja dibahas
 
 </details>
 
-<details>
+<details open>
 <summary><b>Percakapan</b></summary>
 
 - Daftar percakapan beserta unread count
@@ -79,7 +79,7 @@ Akselera Chat terdiri dari dua bagian yang saling bergantung dan sengaja dibahas
 
 </details>
 
-<details>
+<details open>
 <summary><b>Pesan</b></summary>
 
 - **Frontend**: mengenkripsi pesan (AES-GCM + wrapped key RSA-OAEP) sebelum dikirim, mendekripsi pesan masuk
