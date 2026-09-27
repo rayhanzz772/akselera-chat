@@ -95,30 +95,12 @@ Akselera Chat terdiri dari dua bagian yang saling bergantung dan sengaja dibahas
 
 ## 🏗 Arsitektur
 
-```
-┌─────────────────────┐        HTTPS (REST)          ┌──────────────────┐
-│                      │ ────────────────────────────▶│                  │
-│   Frontend           │                               │   Backend        │
-│   Next.js (browser)  │◀──────────────────────────────│   Express.js     │
-│                      │                               │   (REST API)     │
-│  crypto.subtle:      │        WSS (Socket.IO)        │                  │
-│  - enkripsi pesan    │ ────────────────────────────▶│  ┌────────────┐  │
-│  - dekripsi pesan     │◀──────────────────────────────│  │ Socket.IO   │  │
-│  - simpan kunci di    │                               │  │  Server     │  │
-│    IndexedDB          │                               │  └─────┬──────┘  │
-└─────────────────────┘                               └────────┼─────────┘
-                                                                 │
-                                                ┌────────────────┼────────────────┐
-                                                ▼                                 ▼
-                                         ┌─────────────┐                ┌───────────────┐
-                                         │ PostgreSQL  │                │     Redis     │
-                                         │ ciphertext, │                │ adapter +     │
-                                         │ wrapped key,│                │ presence      │
-                                         │ kunci publik│                │               │
-                                         └─────────────┘                └───────────────┘
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/assets/images/architecture.jpeg">
+  <img src="public/assets/images/architecture.jpeg" alt="Akselera Tech" width="320">
+</picture>
 
-Garis putus konseptual antara frontend dan backend ada di titik ini: **plaintext tidak pernah melewati garis HTTPS/WSS di atas**. Yang melewatinya hanya ciphertext, wrapped key, dan kunci publik.
+**plaintext tidak pernah melewati garis HTTPS/WSS di atas**. Yang melewatinya hanya ciphertext, wrapped key, dan kunci publik.
 
 ---
 
@@ -199,6 +181,11 @@ Di sisi lain, password itu sendiri dikirim sebagai plaintext lewat HTTPS ke back
 ---
 
 ## 🔐 Keamanan dan Enkripsi
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/assets/images/encryption.png">
+  <img src="public/assets/images/encryption.png" alt="Akselera Tech" width="320">
+</picture>
 
 Ringkasan pembagian tanggung jawab kriptografi antara kedua sisi:
 
