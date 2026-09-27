@@ -26,7 +26,6 @@ import type { EncryptedMessage, Room } from "@/types/chat";
 export default function ChatPage() {
 	const router = useRouter();
 	const { user, rooms, setRooms, isLoading: isLoadingUser } = useChatBootstrap();
-	const [isDark, setIsDark] = useState(false);
 	const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 	const [messagesByRoom, setMessagesByRoom] = useState<MessagesByRoom>({});
 	const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -206,10 +205,8 @@ export default function ChatPage() {
 	}
 
 	return (
-		<main className={`flex h-dvh flex-col overflow-hidden bg-background text-foreground${isDark ? " dark" : ""}`}>
+		<main className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
 			<Header
-				isDark={isDark}
-				onThemeChange={() => setIsDark((current) => !current)}
 				userName={userName || undefined}
 				onLogout={() => setIsLogoutDialogOpen(true)}
 				className={selectedRoom ? "max-md:hidden" : ""}

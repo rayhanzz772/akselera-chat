@@ -19,7 +19,6 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDark, setIsDark] = useState(false);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,8 +60,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className={`flex min-h-dvh flex-col bg-background text-foreground${isDark ? " dark" : ""}`}>
-      <Header onThemeChange={() => setIsDark((current) => !current)} isDark={isDark} />
+    <main className="flex min-h-dvh flex-col bg-background text-foreground">
+      <Header />
 
       <div className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-6 pb-16">
         <Card className="w-full max-w-md">

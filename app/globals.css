@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* next-themes toggles a `.dark` class on <html>; make `dark:` utilities follow
+   that class instead of the OS preference so both stay in sync. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #09090b;

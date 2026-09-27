@@ -101,12 +101,11 @@ function NewConversationForm({ onOpenChange, onCreated, onRequestPresence }: New
 		<DialogContent>
 			<DialogHeader>
 				<DialogTitle>Start a new conversation</DialogTitle>
-				<DialogDescription>Enter the member ID of the person you want to message.</DialogDescription>
+				<DialogDescription>Enter the member Email of the person you want to message.</DialogDescription>
 			</DialogHeader>
 
 			<form className="mt-6 space-y-4" onSubmit={handleSubmit}>
 				<div className="space-y-2">
-					<label htmlFor="user-email" className="text-sm font-medium">Search by email</label>
 					<Input
 						id="user-email"
 						value={userSearch}
@@ -114,7 +113,7 @@ function NewConversationForm({ onOpenChange, onCreated, onRequestPresence }: New
 							setUserSearch(event.target.value);
 							setSelectedUser(null);
 						}}
-						placeholder="dimas@gmail.com"
+						placeholder="johndoe@gmail.com"
 						autoFocus
 					/>
 				</div>
@@ -136,7 +135,7 @@ function NewConversationForm({ onOpenChange, onCreated, onRequestPresence }: New
 									}}
 								>
 									<span className="flex items-center gap-2">
-										<span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+										<span className="relative flex size-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold">
 											{initialsFrom(user.name)}
 											<PresenceDot userId={user.id} className="size-2.5" />
 										</span>
