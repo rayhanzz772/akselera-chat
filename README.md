@@ -97,7 +97,7 @@ Akselera Chat terdiri dari dua bagian yang saling bergantung dan sengaja dibahas
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="public/assets/images/architecture.jpeg">
-  <img src="public/assets/images/architecture.jpeg" alt="Akselera Tech" width="320">
+  <img src="public/assets/images/architecture.jpeg" alt="Akselera Tech">
 </picture>
 
 **plaintext tidak pernah melewati garis HTTPS/WSS di atas**. Yang melewatinya hanya ciphertext, wrapped key, dan kunci publik.
@@ -184,7 +184,7 @@ Di sisi lain, password itu sendiri dikirim sebagai plaintext lewat HTTPS ke back
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="public/assets/images/encryption.png">
-  <img src="public/assets/images/encryption.png" alt="Akselera Tech" width="320">
+  <img src="public/assets/images/encryption.png" alt="Akselera Tech">
 </picture>
 
 Ringkasan pembagian tanggung jawab kriptografi antara kedua sisi:
