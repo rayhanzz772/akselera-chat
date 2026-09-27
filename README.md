@@ -96,8 +96,8 @@ Akselera Chat terdiri dari dua bagian yang saling bergantung dan sengaja dibahas
 ## 🏗 Arsitektur
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="public/assets/images/architecture.jpeg">
-  <img src="public/assets/images/architecture.jpeg" alt="Akselera Tech">
+  <source media="(prefers-color-scheme: dark)" srcset="public/assets/images/architecture-white.jpeg">
+  <img src="public/assets/images/architecture-white.jpeg" alt="Akselera Tech">
 </picture>
 
 **plaintext tidak pernah melewati garis HTTPS/WSS di atas**. Yang melewatinya hanya ciphertext, wrapped key, dan kunci publik.
