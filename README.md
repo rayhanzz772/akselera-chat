@@ -187,7 +187,9 @@ Di sisi lain, password itu sendiri dikirim sebagai plaintext lewat HTTPS ke back
   <img src="public/assets/images/encryption.png" alt="Akselera Tech">
 </picture>
 
-Ringkasan pembagian tanggung jawab kriptografi antara kedua sisi:
+---
+
+## 📋 Ringkasan pembagian tanggung jawab kriptografi antara kedua sisi:
 
 | Operasi | Dilakukan di | Keterangan |
 |---|---|---|
