@@ -100,7 +100,7 @@ Akselera Chat terdiri dari dua bagian yang saling bergantung dan sengaja dibahas
   <img src="public/assets/images/architecture-white.jpeg" alt="Akselera Tech">
 </picture>
 
-**plaintext tidak pernah melewati garis HTTPS/WSS di atas**. Yang melewatinya hanya ciphertext, wrapped key, dan kunci publik.
+> **Plaintext tidak pernah melewati garis HTTPS/WSS di atas**. Yang melewatinya hanya ciphertext, wrapped key, dan kunci publik.
 
 ---
 
