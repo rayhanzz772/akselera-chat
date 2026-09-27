@@ -42,6 +42,7 @@ Server menyimpan ciphertext. Kunci privat tidak pernah meninggalkan perangkat.
 
 Akselera Chat terdiri dari dua bagian yang saling bergantung dan sengaja dibahas dalam satu README karena kontrak keamanannya menyatu:
 
+| | |
 |---|---|
 | 🖥️ | **Frontend (Next.js)** — antarmuka, pembuatan key pair, enkripsi/dekripsi pesan di browser |
 | 🛠️ | **Backend (Express.js + Socket.IO)** — autentikasi, penyimpanan data terenkripsi, relay pesan realtime |
