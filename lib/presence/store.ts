@@ -8,18 +8,12 @@ export type Presence = {
 	last_seen_at: string | null;
 };
 
-/** Bentuk minimum yang dibutuhkan untuk menyemai status dari respons REST. */
 export type PresenceSeed = {
 	id: string;
 	is_online?: boolean;
 	last_seen_at?: string | null;
 };
 
-/**
- * Objek fallback ini WAJIB berupa satu konstanta modul.
- * `useSyncExternalStore` membandingkan snapshot dengan `Object.is`, jadi objek
- * literal yang dibuat ulang tiap pemanggilan akan memicu render tanpa henti.
- */
 const UNKNOWN_PRESENCE: Presence = {
 	user_id: "",
 	is_online: false,
@@ -35,7 +29,6 @@ function emit() {
 	}
 }
 
-/** Gabungkan status ke dalam store. Hanya entri yang benar-benar berubah yang memicu render. */
 export function setPresence(entries: Presence[]) {
 	let changed = false;
 
@@ -63,12 +56,6 @@ export function setPresence(entries: Presence[]) {
 	if (changed) emit();
 }
 
-/**
- * Timpa seluruh isi store dengan payload `presence:sync`.
- * Dipakai karena payload itu otoritatif: status yang tidak disebut di dalamnya
- * bisa jadi sudah basi, jadi tidak boleh sekadar digabung. Ini juga yang membuat
- * auto-reconnect Socket.IO tetap benar.
- */
 export function replacePresence(entries: Presence[]) {
 	presenceByUserId.clear();
 
@@ -86,13 +73,6 @@ export function replacePresence(entries: Presence[]) {
 	emit();
 }
 
-/**
- * Semai status dari respons REST (`conversations` / `users`).
- *
- * Entri tanpa `is_online` maupun `last_seen_at` sengaja dilewati: kalau backend
- * belum mengirim kedua field itu, penyemaian jadi no-op, bukan menandai semua
- * orang offline.
- */
 export function seedPresence(entries: PresenceSeed[]) {
 	setPresence(
 		entries
