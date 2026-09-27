@@ -9,6 +9,7 @@ import { Header } from "@/components/ui/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -99,12 +100,11 @@ export default function RegisterPage() {
               </label>
               <label className="block space-y-2 text-sm font-medium">
                 <span>Password</span>
-                <Input
+                <PasswordInput
                   required
                   minLength={8}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  type="password"
                   autoComplete="new-password"
                 />
               </label>
