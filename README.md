@@ -315,6 +315,7 @@ Frontend berjalan di `http://localhost:3000`. Karena keduanya di `localhost`, `S
 - Belum ada mekanisme rotasi kunci RSA bila pengguna kehilangan kunci privat (frontend belum punya alur pemulihan)
 - Rate limiting baru diterapkan di endpoint login, belum di endpoint pengiriman pesan
 - Frontend belum menampilkan indikator "sedang mengetik"
+- Belum ada indikator notifications
 
 ---
 
