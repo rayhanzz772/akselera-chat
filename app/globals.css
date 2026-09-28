@@ -51,6 +51,31 @@ body {
   font-family: var(--font-nunito), sans-serif;
 }
 
+.message-bubble {
+  position: relative;
+}
+
+.message-bubble-own::after,
+.message-bubble-incoming::after {
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  content: "";
+}
+
+.message-bubble-own::after {
+  right: -5px;
+  background: var(--foreground);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+.message-bubble-incoming::after {
+  left: -5px;
+  background: var(--bubble);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
 * {
   border-color: var(--border);
 }

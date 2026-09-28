@@ -9,7 +9,6 @@ import type { Room } from "@/types/chat";
 type ConversationListProps = {
 	rooms: Room[];
 	selectedRoomId?: string;
-	/** Di mobile, daftar disembunyikan saat sebuah room sedang dibuka. */
 	isHidden: boolean;
 	onSelectRoom: (room: Room) => void;
 	onCreateConversation: () => void;

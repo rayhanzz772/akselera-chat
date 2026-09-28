@@ -31,7 +31,7 @@ export function Header({ userName, onLogout, className = "" }: HeaderProps) {
       <div className="flex items-center gap-4">
         {userName && <span className="hidden text-sm font-medium sm:inline">{userName}</span>}
         {userName && (
-          <span className="flex size-9 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+          <span className="flex size-9 items-center border border-border/50 justify-center rounded-full bg-muted text-xs font-semibold">
             {initialsFrom(userName)}
           </span>
         )}
