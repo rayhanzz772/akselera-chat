@@ -19,6 +19,27 @@ export const metadata: Metadata = {
   icons: {
     icon: "/assets/logo/favicon.png",
   },
+  openGraph: {
+    title: "Akselera",
+    description: "Internal chat application for Akselera Tech",
+    url: "https://akselera.rayhancreative.web.id",
+    siteName: "Akselera",
+    images: [
+      {
+        url: "/assets/logo/dark.png",
+        width: 1200,
+        height: 630,
+        alt: "Akselera Chat",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Akselera",
+    description: "Internal chat application for Akselera Tech",
+    images: ["/assets/logo/dark.png"],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
