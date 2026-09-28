@@ -193,7 +193,6 @@ Dengan struktur ini, **`conversations` menjadi parent dari chat, `conversation_m
 | Backend — Framework | **Express.js** | Minim dan cukup untuk REST API, hidup berdampingan dengan Socket.IO di HTTP server yang sama |
 | Backend — Realtime server | **Socket.IO** | Reconnect otomatis dan semantik room bawaan — persis yang dibutuhkan untuk broadcast per percakapan |
 | Backend — Database | **PostgreSQL** | Relasi antar pengguna, percakapan, dan pesan butuh transaksi yang konsisten |
-| Backend — Cache & Adapter | **Redis** | Adapter Socket.IO untuk *scaling* horizontal, plus cache status online |
 | Backend — Hashing Password | **Argon2id** | Tahan terhadap serangan GPU/ASIC lebih baik dari bcrypt |
 | Backend — Autentikasi | **JWT** | Stateless, cocok untuk banyak instance server di belakang load balancer |
 | Backend — Validasi Skema | **Zod** | Kontrak request/response tervalidasi di runtime |
