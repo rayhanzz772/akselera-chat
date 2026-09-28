@@ -13,7 +13,7 @@ interface HeaderProps {
 
 export function Header({ userName, onLogout, className = "" }: HeaderProps) {
   return (
-    <header className={`mx-auto flex w-full max-w-7xl shrink-0 items-center justify-between px-6 py-6 ${className}`}>
+    <header className={`mx-auto flex w-full max-w-7xl shrink-0 items-center justify-between px-6 py-4 ${className}`}>
       <Image
         src="/assets/logo/dark.png"
         alt="Akselera Tech"
