@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
 import { clearAuthToken } from "@/lib/api/auth";
-import { deleteConversation, markConversationRead } from "@/lib/api/conversations";
+import { deleteConversation, getConversations, markConversationRead } from "@/lib/api/conversations";
 import { createMessage, getMessages } from "@/lib/api/messages";
 import { appendMessages, dropMessages, EMPTY_MESSAGES, replaceMessages, type MessagesByRoom } from "@/lib/chat/messages";
-import { ENCRYPTED_PLACEHOLDER, messageSummary, promoteRoom, updateRoom } from "@/lib/chat/rooms";
+import { ENCRYPTED_PLACEHOLDER, mapConversationWithPreview, messageSummary, promoteRoom, updateRoom } from "@/lib/chat/rooms";
 import { useChatBootstrap } from "@/lib/chat/use-chat-bootstrap";
 import { requestPresence, useChatSocket, type ConversationUpdatedEvent } from "@/lib/chat/use-chat-socket";
 import { decryptMessage, decryptMessages, encryptMessage } from "@/lib/crypto/messages";
@@ -105,8 +105,21 @@ export default function ChatPage() {
 			}
 		}
 
+		let newRoom: Room | undefined;
+		if (!rooms.some((room) => room.id === event.conversation_id)) {
+			try {
+				const response = await getConversations();
+				const conversation = response.data.find((item) => item.id === event.conversation_id);
+				if (!conversation) return;
+				newRoom = await mapConversationWithPreview(conversation, currentPrivateKey);
+			} catch (loadingError) {
+				setMessageError(loadingError instanceof Error ? loadingError.message : "Conversations could not be loaded.");
+				return;
+			}
+		}
+
 		setRooms((currentRooms) => {
-			const updatedRoom = currentRooms.find((room) => room.id === event.conversation_id);
+			const updatedRoom = currentRooms.find((room) => room.id === event.conversation_id) ?? newRoom;
 			if (!updatedRoom) return currentRooms;
 
 			return promoteRoom(currentRooms, {
