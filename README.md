@@ -104,6 +104,81 @@ Akselera Chat terdiri dari dua bagian yang saling bergantung dan sengaja dibahas
 
 ---
 
+
+## 🏗 Diagram
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/assets/images/erd.png">
+  <img src="public/assets/images/erd.png" alt="Akselera Tech">
+</picture>
+
+## Database Schema & Data Flow
+
+Database menggunakan PostgreSQL dengan empat tabel utama: `users`, `conversations`, `conversation_members`, dan `messages`.
+
+### 1. User
+
+Tabel `users` menyimpan informasi akun pengguna dan data yang berkaitan dengan autentikasi serta encryption key.
+
+- `id` — UUID sebagai primary key.
+- `name` dan `email` — identitas pengguna.
+- `password_hash` — password yang telah di-hash dan tidak menyimpan password asli.
+- `public_key` — public key pengguna yang digunakan untuk proses enkripsi pesan.
+- `encrypted_private_key` — private key yang disimpan dalam bentuk terenkripsi.
+- `key_derivation_salt` — salt yang digunakan dalam proses derivasi key.
+- `last_seen_at` — waktu terakhir pengguna aktif.
+- `deleted_at` — digunakan untuk soft delete akun.
+
+### 2. Conversation
+
+Tabel `conversations` merepresentasikan sebuah ruang percakapan.
+
+Untuk percakapan 1-on-1, satu conversation akan memiliki dua anggota yang dihubungkan melalui tabel `conversation_members`.
+
+### 3. Conversation Members
+
+Tabel `conversation_members` merupakan tabel penghubung antara `users` dan `conversations`.
+
+Satu user dapat memiliki banyak conversation, dan satu conversation dapat memiliki beberapa member. Pada aplikasi ini, conversation digunakan untuk chat 1-on-1 sehingga setiap conversation memiliki dua member.
+
+Kolom penting:
+
+- `conversation_id` — referensi ke conversation.
+- `user_id` — referensi ke user.
+- `last_read_at` — menyimpan waktu terakhir user membaca conversation, yang digunakan untuk menghitung unread message.
+- `(conversation_id, user_id)` memiliki unique constraint untuk mencegah user yang sama masuk dua kali ke conversation yang sama.
+
+### 4. Messages
+
+Tabel `messages` menyimpan pesan yang dikirim dalam sebuah conversation.
+
+Setiap message memiliki:
+
+- `conversation_id` — conversation tempat pesan berada.
+- `sender_id` — user yang mengirim pesan.
+- `ciphertext` — isi pesan yang telah dienkripsi.
+- `iv` — initialization vector yang digunakan dalam enkripsi.
+- `auth_tag` — authentication tag untuk verifikasi integritas ciphertext.
+- `created_at` — waktu pesan dibuat.
+
+Isi pesan tidak disimpan sebagai plaintext. Database hanya menyimpan data ciphertext dan parameter kriptografi yang diperlukan.
+
+---
+
+## Relationship Summary
+
+| Relationship | Keterangan |
+|---|---|
+| `users` → `conversation_members` | Satu user dapat menjadi member di banyak conversation |
+| `conversations` → `conversation_members` | Satu conversation memiliki member |
+| `conversations` → `messages` | Satu conversation memiliki banyak message |
+| `users` → `messages` | Satu user dapat mengirim banyak message |
+| `conversation_members.last_read_at` | Menyimpan posisi terakhir user membaca conversation |
+
+Dengan struktur ini, **`conversations` menjadi parent dari chat, `conversation_members` menentukan siapa yang memiliki akses ke chat, dan `messages` menyimpan seluruh pesan dalam conversation tersebut.**
+
+---
+
 ## 🧱 Stack dan Alasan Memilihnya
 
 ### Ringkasan
