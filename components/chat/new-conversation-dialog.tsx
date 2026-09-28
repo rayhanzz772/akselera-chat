@@ -118,7 +118,6 @@ function NewConversationForm({ onOpenChange, onCreated, onRequestPresence }: New
 					/>
 				</div>
 
-				{isLoadingUsers && <p className="text-sm text-muted-foreground">Loading users...</p>}
 				{!isLoadingUsers && filteredUsers.length > 0 && (
 					<div className="space-y-2">
 						<p className="text-xs text-muted-foreground">Users</p>

@@ -66,7 +66,7 @@ export function ConversationList({
 						onClick={() => onSelectRoom(room)}
 						className={`flex w-full cursor-pointer items-center gap-4 rounded-lg px-3 py-4 text-left transition-colors hover:bg-muted ${selectedRoomId === room.id ? "bg-muted" : ""}`}
 					>
-						<span className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-base font-semibold">
+						<span className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-base font-semibold border">
 							{room.initials}
 							<PresenceDot userId={room.opponentId} />
 						</span>

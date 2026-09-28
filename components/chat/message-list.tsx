@@ -64,7 +64,7 @@ export function MessageList({ roomId, roomName, messages, userId, isLoading, ref
 		<div
 			ref={containerRef}
 			onScroll={handleScroll}
-			className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-muted/30 p-4 md:p-8"
+			className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-muted/60 p-4 md:p-8"
 		>
 			{isLoading && <p className="text-sm text-muted-foreground">Loading messages...</p>}
 			{!isLoading && messages.length === 0 && (
@@ -84,16 +84,33 @@ export function MessageList({ roomId, roomName, messages, userId, isLoading, ref
 							</div>
 						)}
 						<div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-							<div className={`max-w-[75%] rounded-xl px-4 py-3 text-sm shadow-sm ${isOwn ? "bg-foreground text-background" : "bg-bubble"}`}>
-								<p className="whitespace-pre-wrap wrap-anywhere">
-									{"text" in message ? message.text : ENCRYPTED_PLACEHOLDER}
-								</p>
-								<time
-									className={`mt-2 block text-right text-[11px] ${isOwn ? "text-background/70" : "text-muted-foreground"}`}
-									dateTime={message.created_at}
-								>
-									{formatMessageTime(message.created_at)}
-								</time>
+							<div
+								className={`
+									max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-sm
+									${isOwn
+										? "bg-foreground text-background"
+										: "border border-border/50 bg-bubble"
+									}
+								`}
+							>
+								<div className="flex items-end gap-2">
+									<p className="whitespace-pre-wrap wrap-anywhere leading-relaxed">
+										{"text" in message ? message.text : ENCRYPTED_PLACEHOLDER}
+									</p>
+
+									<time
+										className={`
+											shrink-0 text-[10px]
+											${isOwn
+												? "text-background/60"
+												: "text-muted-foreground/70"
+											}
+										`}
+										dateTime={message.created_at}
+									>
+										{formatMessageTime(message.created_at)}
+									</time>
+								</div>
 							</div>
 						</div>
 					</div>
