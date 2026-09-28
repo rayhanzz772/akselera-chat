@@ -342,11 +342,14 @@ cp .env.example .env
 ```
 
 ```env
-PORT=8000
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/akselera_chat
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=ganti_dengan_secret_yang_kuat
-JWT_EXPIRES_IN=1d
+DB_USER=postgres
+DB_PASS=postgres
+DB_NAME=akselera_chat
+DB_HOST=localhost
+DB_PORT=5432
+DB_CONNECTION=postgresql
+
+JWT_KEY=ganti_dengan_secret_acak_yang_panjang
 ```
 
 ```bash
