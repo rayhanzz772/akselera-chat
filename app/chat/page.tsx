@@ -22,6 +22,7 @@ import { ConversationList } from "@/components/chat/conversation-list";
 import { type MessageListHandle } from "@/components/chat/message-list";
 import { NewConversationDialog } from "@/components/chat/new-conversation-dialog";
 import type { EncryptedMessage, Room } from "@/types/chat";
+import { LoaderCircle } from "lucide-react";
 
 export default function ChatPage() {
 	const router = useRouter();
@@ -226,8 +227,9 @@ export default function ChatPage() {
 			/>
 
 			{isLoadingUser ? (
-				<div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-					Loading your chats...
+				<div role="status" className="flex flex-col items-center justify-center flex-1 gap-2 text-muted-foreground">
+					<LoaderCircle className="size-8 animate-spin" aria-hidden="true" />
+					<span>Loading your chats...</span>
 				</div>
 			) : (
 				<div className="mx-auto flex min-h-0 w-full flex-1 overflow-hidden border-y bg-card">

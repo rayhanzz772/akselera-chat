@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useImperativeHandle, useRef, type Ref } from "react";
+import { LoaderCircle } from "lucide-react";
 import type { LoadedMessage } from "@/lib/api/messages";
 import { ENCRYPTED_PLACEHOLDER } from "@/lib/chat/rooms";
 import { formatMessageDate, formatMessageTime } from "@/lib/format/datetime";
@@ -66,7 +67,12 @@ export function MessageList({ roomId, roomName, messages, userId, isLoading, ref
 			onScroll={handleScroll}
 			className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-muted/40 p-4 md:p-8"
 		>
-			{isLoading && <p className="text-sm text-muted-foreground">Loading messages...</p>}
+			{isLoading && (
+				<div role="status" className="flex items-center justify-center py-4 text-muted-foreground">
+					<LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
+					<span className="sr-only">Loading messages...</span>
+				</div>
+			)}
 			{!isLoading && messages.length === 0 && (
 				<p className="text-sm text-muted-foreground">Start a secure conversation with {roomName}.</p>
 			)}
