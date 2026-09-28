@@ -8,10 +8,11 @@ type MessageComposerProps = {
 	value: string;
 	onValueChange: (value: string) => void;
 	onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
+	isSending: boolean;
 	error: string;
 };
 
-export function MessageComposer({ value, onValueChange, onSubmit, error }: MessageComposerProps) {
+export function MessageComposer({ value, onValueChange, onSubmit, isSending, error }: MessageComposerProps) {
 	return (
 		<form onSubmit={onSubmit} className="flex gap-3 border-t p-5">
 			{error && <p className="absolute -mt-12 text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -20,8 +21,9 @@ export function MessageComposer({ value, onValueChange, onSubmit, error }: Messa
 				onChange={(event) => onValueChange(event.target.value)}
 				placeholder="Type your message..."
 				aria-label="Message"
+				disabled={isSending}
 			/>
-			<Button type="submit">Send</Button>
+			<Button type="submit" disabled={isSending}>{isSending ? "Sending..." : "Send"}</Button>
 		</form>
 	);
 }

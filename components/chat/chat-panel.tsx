@@ -17,6 +17,7 @@ type ChatPanelProps = {
 	message: string;
 	onMessageChange: (value: string) => void;
 	onSend: (event: SubmitEvent<HTMLFormElement>) => void;
+	isSending: boolean;
 	messageError: string;
 	onBack: () => void;
 	onDelete: () => void;
@@ -43,6 +44,7 @@ export function ChatPanel({
 	message,
 	onMessageChange,
 	onSend,
+	isSending,
 	messageError,
 	onBack,
 	onDelete,
@@ -98,6 +100,7 @@ export function ChatPanel({
 						value={message}
 						onValueChange={onMessageChange}
 						onSubmit={onSend}
+						isSending={isSending}
 						error={messageError}
 					/>
 				</>

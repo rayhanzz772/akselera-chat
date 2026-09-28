@@ -30,12 +30,14 @@ export default function ChatPage() {
 	const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 	const [messagesByRoom, setMessagesByRoom] = useState<MessagesByRoom>({});
 	const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+	const [isSending, setIsSending] = useState(false);
 	const [message, setMessage] = useState("");
 	const [messageError, setMessageError] = useState("");
 	const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 	const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 	const messageListRef = useRef<MessageListHandle | null>(null);
+	const isSendingRef = useRef(false);
 
 	const userId = user?.id ?? null;
 	const userName = user?.name ?? "";
@@ -181,23 +183,29 @@ export default function ChatPage() {
 
 	async function handleSend(event: SubmitEvent<HTMLFormElement>) {
 		event.preventDefault();
+		if (isSendingRef.current) return;
+
 		setMessageError("");
 		if (!message.trim() || !selectedRoom) return;
 		if (!selectedRoom.publicKey) {
 			setMessageError("The recipient encryption key is unavailable.");
 			return;
 		}
-		const currentPrivateKey = getPrivateKey();
-		const senderPublicKey = getPublicKey() ?? (currentPrivateKey
-			? await getPublicKeyFromPrivateKey(currentPrivateKey)
-			: null);
-		if (!senderPublicKey) {
-			setMessageError("Your encryption key is unavailable. Please log in again.");
-			return;
-		}
-		setPublicKey(senderPublicKey);
+
+		isSendingRef.current = true;
+		setIsSending(true);
 
 		try {
+			const currentPrivateKey = getPrivateKey();
+			const senderPublicKey = getPublicKey() ?? (currentPrivateKey
+				? await getPublicKeyFromPrivateKey(currentPrivateKey)
+				: null);
+			if (!senderPublicKey) {
+				setMessageError("Your encryption key is unavailable. Please log in again.");
+				return;
+			}
+			setPublicKey(senderPublicKey);
+
 			const encryptedMessage = await encryptMessage(message.trim(), selectedRoom.publicKey, senderPublicKey);
 			const createdMessage = await createMessage(selectedRoom.id, encryptedMessage);
 			const [visibleMessage] = await decryptMessages([createdMessage], getPrivateKey());
@@ -208,6 +216,9 @@ export default function ChatPage() {
 			messageListRef.current?.scrollToBottom();
 		} catch (submissionError) {
 			setMessageError(submissionError instanceof Error ? submissionError.message : "Message could not be sent.");
+		} finally {
+			isSendingRef.current = false;
+			setIsSending(false);
 		}
 	}
 
@@ -248,6 +259,7 @@ export default function ChatPage() {
 						message={message}
 						onMessageChange={setMessage}
 						onSend={(event) => void handleSend(event)}
+						isSending={isSending}
 						messageError={messageError}
 						onBack={() => setSelectedRoom(null)}
 						onDelete={handleDeleteConversation}
