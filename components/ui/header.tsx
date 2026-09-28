@@ -19,14 +19,14 @@ export function Header({ userName, onLogout, className = "" }: HeaderProps) {
         alt="Akselera Tech"
         width={240}
         height={90}
-        className="h-20 w-auto object-contain dark:hidden"
+        className="h-18 w-auto object-contain dark:hidden"
       />
       <Image
         src="/assets/logo/white.png"
         alt="Akselera Tech"
         width={240}
         height={90}
-        className="hidden h-20 w-auto object-contain dark:block"
+        className="hidden h-18 w-auto object-contain dark:block"
       />
       <div className="flex items-center gap-4">
         {userName && <span className="hidden text-sm font-medium sm:inline">{userName}</span>}
