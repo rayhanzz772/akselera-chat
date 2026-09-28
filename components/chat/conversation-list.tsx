@@ -43,8 +43,8 @@ export function ConversationList({
 		<aside className={`min-h-0 w-full shrink-0 flex-col border-r md:flex md:max-w-sm md:w-[34%] ${isHidden ? "hidden" : "flex"}`}>
 			<div className="flex items-center gap-2 p-6">
 				<Input
-					aria-label="Search chats"
-					placeholder="Search chats"
+					aria-label="Search conversations"
+					placeholder="Search conversations"
 					value={search}
 					onChange={(event) => setSearch(event.target.value)}
 					className="h-12 rounded-full px-5"
