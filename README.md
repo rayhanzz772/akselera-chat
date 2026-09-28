@@ -396,6 +396,13 @@ Frontend berjalan di `http://localhost:3000`. Karena keduanya di `localhost`, `S
 
 ---
 
+## 🤖 AI Tools yang digunakan
+
+- Claude Code
+- Github Copilot
+
+---
+
 ## ⚠️ Catatan Sebelum Production
 
 - **Wajib HTTPS untuk keduanya** — tanpa ini, `SubtleCrypto` di frontend tidak berfungsi, dan tidak ada request valid yang bisa sampai ke backend
