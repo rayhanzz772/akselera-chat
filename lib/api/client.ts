@@ -1,5 +1,12 @@
 const API_BASE_URL =
 	process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api/v1";
+
+if (typeof window !== "undefined" && !/^https?:\/\//.test(API_BASE_URL)) {
+	console.error(
+		`[api] NEXT_PUBLIC_API_URL is missing a protocol (got "${API_BASE_URL}"). ` +
+			`It must start with http:// or https:// — otherwise fetch() will treat it as a relative path.`,
+	);
+}
 const AUTH_TOKEN_KEY = "akselera_access_token";
 
 export function getAuthToken() {
