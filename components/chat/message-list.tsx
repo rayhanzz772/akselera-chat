@@ -64,7 +64,7 @@ export function MessageList({ roomId, roomName, messages, userId, isLoading, ref
 		<div
 			ref={containerRef}
 			onScroll={handleScroll}
-			className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-muted/60 p-4 md:p-8"
+			className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-muted/40 p-4 md:p-8"
 		>
 			{isLoading && <p className="text-sm text-muted-foreground">Loading messages...</p>}
 			{!isLoading && messages.length === 0 && (
