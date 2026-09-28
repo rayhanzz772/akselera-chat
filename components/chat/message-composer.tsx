@@ -18,7 +18,7 @@ export function MessageComposer({ value, onValueChange, onSubmit, error }: Messa
 			<Input
 				value={value}
 				onChange={(event) => onValueChange(event.target.value)}
-				placeholder="Tulis pesan..."
+				placeholder="Type your message..."
 				aria-label="Message"
 			/>
 			<Button type="submit">Send</Button>

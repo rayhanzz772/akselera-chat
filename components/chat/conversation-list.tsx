@@ -45,7 +45,7 @@ export function ConversationList({
 			<div className="flex items-center gap-2 p-6">
 				<Input
 					aria-label="Search chats"
-					placeholder="Cari chat"
+					placeholder="Search chats"
 					value={search}
 					onChange={(event) => setSearch(event.target.value)}
 					className="h-12 rounded-full px-5"
@@ -53,7 +53,7 @@ export function ConversationList({
 				<Button type="button" className="h-12 shrink-0 rounded-full px-4" onClick={onCreateConversation}>
 					<div className="flex items-center gap-2">
 						+
-						<span className="hidden sm:inline">Chat baru</span>
+						<span className="hidden sm:inline">New chat</span>
 					</div>
 				</Button>
 			</div>

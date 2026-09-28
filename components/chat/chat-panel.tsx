@@ -27,9 +27,9 @@ function EmptyState() {
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
 			<Contact className="mb-4 h-24 w-24 text-muted-foreground" />
-			<h1 className="text-xl font-semibold">Pilih percakapan atau mulai chat baru</h1>
+			<h1 className="text-xl font-semibold">Select Chat or Start New Chat</h1>
 			<p className="mt-3 max-w-md text-base text-muted-foreground">
-				Daftar hanya berisi percakapan milik akun yang login.
+				Select a chat from the list or start a new conversation to begin messaging. You can also search for contacts to find someone to chat with.
 			</p>
 		</div>
 	);
