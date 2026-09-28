@@ -349,6 +349,8 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_CONNECTION=postgresql
 
+PORT=8000
+
 JWT_KEY=ganti_dengan_secret_acak_yang_panjang
 ```
 
