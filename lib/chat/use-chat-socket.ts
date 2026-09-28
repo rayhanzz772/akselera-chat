@@ -8,6 +8,11 @@ import type { EncryptedMessage } from "@/types/chat";
 
 export const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8001";
 
+function updateTabBadge(count: number) {
+	if (typeof document === "undefined") return;
+	document.title = count > 0 ? `(${count}) Akselera Chat` : "Akselera Chat";
+}
+
 export type ConversationUpdatedEvent = {
 	conversation_id: string;
 	last_message: EncryptedMessage;
@@ -47,7 +52,10 @@ export function useChatSocket({
 	});
 
 	useEffect(() => {
-		if (!userId) return;
+		if (!userId) {
+			updateTabBadge(0);
+			return;
+		}
 
 		const token = getAuthToken();
 		const socket = io(SOCKET_URL, {
@@ -72,9 +80,13 @@ export function useChatSocket({
 			void handlersRef.current.onConversationUpdated?.(event);
 		});
 
+		socket.on("unread:sync", (event: { total_unread: number }) => updateTabBadge(event.total_unread));
+		socket.on("unread:updated", (event: { total_unread: number }) => updateTabBadge(event.total_unread));
+
 		return () => {
 			socketRef.current = null;
 			socket.disconnect();
+			updateTabBadge(0);
 		};
 	}, [userId]);
 
