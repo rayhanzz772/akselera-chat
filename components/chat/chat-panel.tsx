@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PresenceDot, PresenceLabel } from "@/components/ui/presence";
 import { MessageComposer } from "@/components/chat/message-composer";
 import { MessageList, type MessageListHandle } from "@/components/chat/message-list";
-import type { Room } from "@/types/chat";
+import type { ReplyTarget, Room } from "@/types/chat";
 
 type ChatPanelProps = {
 	room: Room | null;
@@ -19,6 +19,10 @@ type ChatPanelProps = {
 	onSend: (event: SubmitEvent<HTMLFormElement>) => void;
 	isSending: boolean;
 	messageError: string;
+	userName: string;
+	replyTarget: ReplyTarget | null;
+	onReply: (target: ReplyTarget) => void;
+	onCancelReply: () => void;
 	onBack: () => void;
 	onDelete: () => void;
 	messageListRef?: Ref<MessageListHandle>;
@@ -46,6 +50,10 @@ export function ChatPanel({
 	onSend,
 	isSending,
 	messageError,
+	userName,
+	replyTarget,
+	onReply,
+	onCancelReply,
 	onBack,
 	onDelete,
 	messageListRef,
@@ -92,9 +100,11 @@ export function ChatPanel({
 						ref={messageListRef}
 						roomId={room.id}
 						roomName={room.name}
+						userName={userName}
 						messages={messages}
 						userId={userId}
 						isLoading={isLoadingMessages}
+						onReply={onReply}
 					/>
 					<MessageComposer
 						value={message}
@@ -102,6 +112,8 @@ export function ChatPanel({
 						onSubmit={onSend}
 						isSending={isSending}
 						error={messageError}
+						replyTarget={replyTarget}
+						onCancelReply={onCancelReply}
 					/>
 				</>
 			) : (

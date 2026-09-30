@@ -6,6 +6,7 @@ export type CreateMessagePayload = {
 	ciphertext: string;
 	iv: string;
 	auth_tag: string;
+	reply_to_message_id: string | null;
 };
 
 export async function createMessage(conversationId: string, payload: CreateMessagePayload) {

@@ -5,6 +5,7 @@ import { LoaderCircle } from "lucide-react";
 import type { LoadedMessage } from "@/lib/api/messages";
 import { ENCRYPTED_PLACEHOLDER } from "@/lib/chat/rooms";
 import { formatMessageDate, formatMessageTime } from "@/lib/format/datetime";
+import type { ReplyTarget } from "@/types/chat";
 
 export type MessageListHandle = {
 	/** Paksa daftar menempel ke bawah — dipakai setelah pengguna mengirim pesan. */
@@ -14,9 +15,11 @@ export type MessageListHandle = {
 type MessageListProps = {
 	roomId: string | null;
 	roomName: string;
+	userName: string;
 	messages: LoadedMessage[];
 	userId: string | number | null;
 	isLoading: boolean;
+	onReply: (target: ReplyTarget) => void;
 	ref?: Ref<MessageListHandle>;
 };
 
@@ -27,7 +30,7 @@ function isOwnMessage(message: LoadedMessage, userId: string | number | null) {
 	return String(message.sender_id) === String(userId);
 }
 
-export function MessageList({ roomId, roomName, messages, userId, isLoading, ref }: MessageListProps) {
+export function MessageList({ roomId, roomName, userName, messages, userId, isLoading, onReply, ref }: MessageListProps) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const isNearBottomRef = useRef(true);
 
@@ -81,6 +84,15 @@ export function MessageList({ roomId, roomName, messages, userId, isLoading, ref
 				const isNewDate = !previousMessage
 					|| new Date(previousMessage.created_at).toDateString() !== new Date(message.created_at).toDateString();
 				const isOwn = isOwnMessage(message, userId);
+				const repliedMessage = message.reply_to_message_id
+					? messages.find((candidate) => candidate.id === message.reply_to_message_id)
+					: undefined;
+				const repliedText = repliedMessage && "text" in repliedMessage && typeof repliedMessage.text === "string"
+					? repliedMessage.text
+					: "Message not available";
+				const repliedSender = repliedMessage
+					? isOwnMessage(repliedMessage, userId) ? userName || "You" : roomName
+					: "Message not available";
 
 				return (
 					<div key={message.id} className="shrink-0 space-y-3">
@@ -98,7 +110,20 @@ export function MessageList({ roomId, roomName, messages, userId, isLoading, ref
 										: "message-bubble-incoming rounded-bl-sm border border-border/50 bg-bubble"
 									}
 								`}
+								title="Double-click to reply"
+								onDoubleClick={() => onReply({
+									id: message.id,
+									senderId: message.sender_id,
+									senderName: isOwn ? userName || "You" : roomName,
+									plaintext: "text" in message && typeof message.text === "string" ? message.text : "Pesan tidak tersedia",
+								})}
 							>
+								{message.reply_to_message_id ? (
+									<div className={`mb-2 border-l-2 pl-2 text-xs ${isOwn ? "border-background/50 text-background/75" : "border-foreground/30 text-muted-foreground"}`}>
+										<p className="font-semibold">{repliedSender}</p>
+										<p className="line-clamp-2 whitespace-pre-wrap wrap-anywhere">{repliedText}</p>
+									</div>
+								) : null}
 								<div className="flex items-end gap-2">
 									<p className="whitespace-pre-wrap wrap-anywhere leading-relaxed">
 										{"text" in message ? message.text : ENCRYPTED_PLACEHOLDER}

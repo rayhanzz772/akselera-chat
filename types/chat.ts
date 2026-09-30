@@ -47,10 +47,18 @@ export type EncryptedMessage = {
 	id: string;
 	conversation_id: string;
 	sender_id: string;
+	reply_to_message_id: string | null;
 	ciphertext: string;
 	iv: string;
 	auth_tag: string;
 	created_at: string;
+};
+
+export type ReplyTarget = {
+	id: string;
+	senderId: string;
+	senderName: string;
+	plaintext: string;
 };
 
 export type DecryptedMessage = EncryptedMessage & {

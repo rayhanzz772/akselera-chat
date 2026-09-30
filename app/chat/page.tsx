@@ -21,7 +21,7 @@ import { ChatPanel } from "@/components/chat/chat-panel";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { type MessageListHandle } from "@/components/chat/message-list";
 import { NewConversationDialog } from "@/components/chat/new-conversation-dialog";
-import type { EncryptedMessage, Room } from "@/types/chat";
+import type { EncryptedMessage, ReplyTarget, Room } from "@/types/chat";
 import { LoaderCircle } from "lucide-react";
 
 export default function ChatPage() {
@@ -32,6 +32,7 @@ export default function ChatPage() {
 	const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 	const [isSending, setIsSending] = useState(false);
 	const [message, setMessage] = useState("");
+	const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
 	const [messageError, setMessageError] = useState("");
 	const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -91,6 +92,7 @@ export default function ChatPage() {
 		function handleKeyDown(event: KeyboardEvent) {
 			if (event.key !== "Escape" || isAnyDialogOpen()) return;
 
+			setReplyTarget(null);
 			setSelectedRoom(null);
 		}
 
@@ -146,11 +148,13 @@ export default function ChatPage() {
 
 	const handleConversationCreated = useCallback((result: { rooms: Room[]; room: Room }) => {
 		setRooms(result.rooms);
+		setReplyTarget(null);
 		setSelectedRoom(result.room);
 		setIsNewConversationOpen(false);
 	}, []);
 
 	async function handleSelectRoom(room: Room) {
+		setReplyTarget(null);
 		setSelectedRoom(room);
 		setRooms((currentRooms) => updateRoom(currentRooms, room.id, { unreadCount: 0 }));
 
@@ -173,6 +177,7 @@ export default function ChatPage() {
 			await deleteConversation(selectedRoom.id);
 			setRooms((currentRooms) => currentRooms.filter((room) => room.id !== selectedRoom.id));
 			setMessagesByRoom((current) => dropMessages(current, selectedRoom.id));
+			setReplyTarget(null);
 			setSelectedRoom(null);
 			setMessageError("");
 			setIsDeleteDialogOpen(false);
@@ -207,12 +212,16 @@ export default function ChatPage() {
 			setPublicKey(senderPublicKey);
 
 			const encryptedMessage = await encryptMessage(message.trim(), selectedRoom.publicKey, senderPublicKey);
-			const createdMessage = await createMessage(selectedRoom.id, encryptedMessage);
+			const createdMessage = await createMessage(selectedRoom.id, {
+				...encryptedMessage,
+				reply_to_message_id: replyTarget?.id ?? null,
+			});
 			const [visibleMessage] = await decryptMessages([createdMessage], getPrivateKey());
 
 			setMessagesByRoom((current) => appendMessages(current, selectedRoom.id, [visibleMessage]));
 			setRooms((currentRooms) => updateRoom(currentRooms, selectedRoom.id, messageSummary(visibleMessage, 0)));
 			setMessage("");
+			setReplyTarget(null);
 			messageListRef.current?.scrollToBottom();
 		} catch (submissionError) {
 			setMessageError(submissionError instanceof Error ? submissionError.message : "Message could not be sent.");
@@ -257,11 +266,18 @@ export default function ChatPage() {
 						messages={visibleMessages}
 						isLoadingMessages={isLoadingMessages}
 						message={message}
+						userName={userName}
+						replyTarget={replyTarget}
+						onReply={setReplyTarget}
+						onCancelReply={() => setReplyTarget(null)}
 						onMessageChange={setMessage}
 						onSend={(event) => void handleSend(event)}
 						isSending={isSending}
 						messageError={messageError}
-						onBack={() => setSelectedRoom(null)}
+						onBack={() => {
+							setReplyTarget(null);
+							setSelectedRoom(null);
+						}}
 						onDelete={handleDeleteConversation}
 						messageListRef={messageListRef}
 					/>

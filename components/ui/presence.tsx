@@ -33,7 +33,7 @@ export function presenceLabel(presence: Presence): string | null {
 	if (!presence.last_seen_at) return null;
 
 	const relative = formatRelative(presence.last_seen_at);
-	return relative ? `Last seen ${relative}` : null;
+	return relative ? `Last active ${relative}` : null;
 }
 
 export function PresenceDot({ userId, className = "" }: { userId: string | null | undefined; className?: string }) {
