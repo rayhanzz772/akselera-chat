@@ -2,7 +2,7 @@
 
 import { usePresence, type Presence } from "@/lib/presence/store";
 
-const relativeTime = new Intl.RelativeTimeFormat("id", { numeric: "auto" });
+const relativeTime = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
 const DIVISIONS: { amount: number; unit: Intl.RelativeTimeFormatUnit }[] = [
 	{ amount: 60, unit: "second" },
