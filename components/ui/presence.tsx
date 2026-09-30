@@ -28,19 +28,14 @@ function formatRelative(value: string) {
 	return null;
 }
 
-/** `"Online"`, `null` kalau tidak ada info apa pun, atau `"Terakhir dilihat ..."`. */
 export function presenceLabel(presence: Presence): string | null {
 	if (presence.is_online) return "Online";
 	if (!presence.last_seen_at) return null;
 
 	const relative = formatRelative(presence.last_seen_at);
-	return relative ? `Terakhir dilihat ${relative}` : null;
+	return relative ? `Last seen ${relative}` : null;
 }
 
-/**
- * Titik hijau di pojok avatar. Perlu induk ber-`relative`.
- * Tidak merender apa pun saat offline supaya tidak ada sisa ruang kosong.
- */
 export function PresenceDot({ userId, className = "" }: { userId: string | null | undefined; className?: string }) {
 	const presence = usePresence(userId);
 	if (!presence.is_online) return null;
@@ -55,7 +50,6 @@ export function PresenceDot({ userId, className = "" }: { userId: string | null 
 	);
 }
 
-/** Baris teks status di bawah nama. `fallback` dipakai kalau statusnya belum diketahui. */
 export function PresenceLabel({
 	userId,
 	fallback,
