@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PresenceDot } from "@/components/ui/presence";
+import { toast } from "@/components/ui/toast";
 import type { Room, UserSummary } from "@/types/chat";
 
 type NewConversationDialogProps = {
@@ -71,6 +72,7 @@ function NewConversationForm({ onOpenChange, onCreated, onRequestPresence }: New
 		event.preventDefault();
 		if (!selectedUser) {
 			setError("Select a user first.");
+			toast.add({ title: "Select a user", description: "Choose a user before starting a conversation.", type: "error" });
 			return;
 		}
 
@@ -88,10 +90,11 @@ function NewConversationForm({ onOpenChange, onCreated, onRequestPresence }: New
 			}
 
 			onCreated({ rooms, room });
+			toast.add({ title: "Conversation started", description: `You can now chat with ${selectedUser.name}.`, type: "success" });
 		} catch (creationError) {
-			setError(
-				creationError instanceof Error ? creationError.message : "Conversation could not be created.",
-			);
+			const description = creationError instanceof Error ? creationError.message : "Conversation could not be created.";
+			setError(description);
+			toast.add({ title: "Could not start conversation", description, type: "error" });
 		} finally {
 			setIsCreating(false);
 		}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PresenceDot } from "@/components/ui/presence";
 import type { Room } from "@/types/chat";
+import { Plus } from "lucide-react";
 
 type ConversationListProps = {
 	rooms: Room[];
@@ -49,9 +50,9 @@ export function ConversationList({
 					onChange={(event) => setSearch(event.target.value)}
 					className="h-12 rounded-full px-5"
 				/>
-				<Button type="button" className="h-12 shrink-0 rounded-full px-4" onClick={onCreateConversation}>
+				<Button type="button" className="h-12 shrink-0 rounded-md px-4" onClick={onCreateConversation}>
 					<div className="flex items-center gap-2">
-						+
+						<Plus className="size-4" />
 						<span className="hidden sm:inline">New chat</span>
 					</div>
 				</Button>

@@ -17,6 +17,7 @@ import { replacePresence, setPresence } from "@/lib/presence/store";
 import { Header } from "@/components/ui/header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { isAnyDialogOpen } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/toast";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { ConversationList } from "@/components/chat/conversation-list";
 import { type MessageListHandle } from "@/components/chat/message-list";
@@ -181,8 +182,11 @@ export default function ChatPage() {
 			setSelectedRoom(null);
 			setMessageError("");
 			setIsDeleteDialogOpen(false);
+			toast.add({ title: "Conversation deleted", description: "The conversation was removed.", type: "success" });
 		} catch (deleteError) {
-			setMessageError(deleteError instanceof Error ? deleteError.message : "Conversation could not be deleted.");
+			const description = deleteError instanceof Error ? deleteError.message : "Conversation could not be deleted.";
+			setMessageError(description);
+			toast.add({ title: "Could not delete conversation", description, type: "error" });
 		}
 	}
 
@@ -194,6 +198,7 @@ export default function ChatPage() {
 		if (!message.trim() || !selectedRoom) return;
 		if (!selectedRoom.publicKey) {
 			setMessageError("The recipient encryption key is unavailable.");
+			toast.add({ title: "Message could not be sent", description: "The recipient encryption key is unavailable.", type: "error" });
 			return;
 		}
 
@@ -224,7 +229,9 @@ export default function ChatPage() {
 			setReplyTarget(null);
 			messageListRef.current?.scrollToBottom();
 		} catch (submissionError) {
-			setMessageError(submissionError instanceof Error ? submissionError.message : "Message could not be sent.");
+			const description = submissionError instanceof Error ? submissionError.message : "Message could not be sent.";
+			setMessageError(description);
+			toast.add({ title: "Message could not be sent", description, type: "error" });
 		} finally {
 			isSendingRef.current = false;
 			setIsSending(false);
@@ -235,6 +242,7 @@ export default function ChatPage() {
 		clearAuthToken();
 		clearPrivateKey();
 		setIsLogoutDialogOpen(false);
+		toast.add({ title: "Logged out", description: "You have been signed out.", type: "success" });
 		router.replace("/login");
 	}
 

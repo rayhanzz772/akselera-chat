@@ -68,7 +68,7 @@ export function MessageList({ roomId, roomName, userName, messages, userId, isLo
 		<div
 			ref={containerRef}
 			onScroll={handleScroll}
-			className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-muted/40 p-4 md:p-8"
+			className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-message-background/40 p-4 md:p-8"
 		>
 			{isLoading && (
 				<div role="status" className="flex items-center justify-center py-4 text-muted-foreground">
@@ -91,11 +91,16 @@ export function MessageList({ roomId, roomName, userName, messages, userId, isLo
 					? repliedMessage.text
 					: "Message not available";
 				const repliedSender = repliedMessage
-					? isOwnMessage(repliedMessage, userId) ? userName || "You" : roomName
+					? isOwnMessage(repliedMessage, userId) ? "You" : roomName
 					: "Message not available";
 
 				return (
-					<div key={message.id} className="shrink-0 space-y-3">
+					<div
+					key={message.id}
+					className={`shrink-0 ${
+						isNewDate ? "mt-2" : "mt-1"
+					}`}
+					>
 						{isNewDate && (
 							<div className="py-3 text-center text-xs font-medium text-muted-foreground">
 								{formatMessageDate(message.created_at)}
@@ -104,10 +109,10 @@ export function MessageList({ roomId, roomName, userName, messages, userId, isLo
 						<div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
 							<div
 								className={`
-									message-bubble max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-sm
+									message-bubble max-w-[75%] rounded-2xl px-4 py-2.5 text-sm
 									${isOwn
-										? "message-bubble-own rounded-br-sm bg-foreground text-background"
-										: "message-bubble-incoming rounded-bl-sm border border-border/50 bg-bubble"
+										? "message-bubble-own rounded-br-md bg-foreground text-background"
+										: "message-bubble-incoming rounded-bl-md bg-bubble"
 									}
 								`}
 								title="Double-click to reply"
@@ -119,7 +124,7 @@ export function MessageList({ roomId, roomName, userName, messages, userId, isLo
 								})}
 							>
 								{message.reply_to_message_id ? (
-									<div className={`mb-2 border-l-2 pl-2 text-xs ${isOwn ? "border-background/50 text-background/75" : "border-foreground/30 text-muted-foreground"}`}>
+									<div className={`mb-2 border-l-2 pl-2 text-xs ${isOwn ? "border-background/50 text-background/75" : "border-background/50 text-muted-foreground"}`}>
 										<p className="font-semibold">{repliedSender}</p>
 										<p className="line-clamp-2 whitespace-pre-wrap wrap-anywhere">{repliedText}</p>
 									</div>

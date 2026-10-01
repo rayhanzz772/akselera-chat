@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { toast } from "@/components/ui/toast";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function LoginPage() {
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
+      toast.add({ title: "Login failed", description: "Password must be at least 8 characters.", type: "error" });
       return;
     }
 
@@ -53,13 +55,16 @@ export default function LoginPage() {
     }
 
       setPassword("");
+      toast.add({ title: "Login successful", description: "Welcome back.", type: "success" });
       router.replace("/chat");
     } catch (submissionError) {
+      const description = submissionError instanceof Error
+        ? submissionError.message
+        : "Login failed. Please try again.";
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : "Login failed. Please try again.",
+        description,
       );
+      toast.add({ title: "Login failed", description, type: "error" });
     } finally {
       setIsSubmitting(false);
     }

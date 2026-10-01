@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { toast } from "@/components/ui/toast";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function RegisterPage() {
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
+      toast.add({ title: "Registration failed", description: "Password must be at least 8 characters.", type: "error" });
       return;
     }
 
@@ -47,13 +49,16 @@ export default function RegisterPage() {
       );
 
       setPassword("");
+      toast.add({ title: "Account created", description: "Your account is ready. Please log in.", type: "success" });
       router.replace("/login");
     } catch (submissionError) {
+      const description = submissionError instanceof Error
+        ? submissionError.message
+        : "Registration failed. Please try again.";
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : "Registration failed. Please try again.",
+        description,
       );
+      toast.add({ title: "Registration failed", description, type: "error" });
     } finally {
       setIsSubmitting(false);
     }

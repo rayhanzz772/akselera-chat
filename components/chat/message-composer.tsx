@@ -1,7 +1,7 @@
 "use client";
 
 import type { SubmitEvent } from "react";
-import { X } from "lucide-react";
+import { SendHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ReplyTarget } from "@/types/chat";
@@ -48,7 +48,16 @@ export function MessageComposer({ value, onValueChange, onSubmit, isSending, err
 					aria-label="Message"
 					disabled={isSending}
 				/>
-				<Button type="submit" disabled={isSending}>{isSending ? "Sending..." : "Send"}</Button>
+				<Button
+					className="shrink-0 size-10"
+					size="icon"
+					type="submit"
+					disabled={isSending}
+					aria-label={isSending ? "Sending message" : "Send message"}
+					title={isSending ? "Sending message" : "Send message"}
+				>
+					<SendHorizontal className="size-5" aria-hidden="true" />
+				</Button>
 			</div>
 		</form>
 	);
