@@ -47,9 +47,10 @@ export function MessageComposer({ value, onValueChange, onSubmit, isSending, err
 					placeholder="Type your message..."
 					aria-label="Message"
 					disabled={isSending}
+					className="rounded-full pl-5 pr-5"
 				/>
 				<Button
-					className="shrink-0 size-10"
+					className="shrink-0 size-10 rounded-full p-0"
 					size="icon"
 					type="submit"
 					disabled={isSending}

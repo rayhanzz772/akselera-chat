@@ -63,7 +63,7 @@ export function ChatPanel({
 			{room ? (
 				<>
 					<div className="flex items-center justify-between gap-3 border-b px-4 py-5 md:px-8">
-						<div className="flex items-center gap-3">
+						<div className="flex min-w-0 flex-1 items-center gap-3">
 							<Button
 								type="button"
 								variant="ghost"
@@ -79,8 +79,8 @@ export function ChatPanel({
 								{room.initials}
 								<PresenceDot userId={room.opponentId} />
 							</span>
-							<div>
-								<h1 className="font-semibold">{room.name}</h1>
+							<div className="min-w-0 flex-1">
+								<h1 className="truncate text-base font-semibold">{room.name}</h1>
 								<PresenceLabel userId={room.opponentId} fallback="Active conversation" />
 							</div>
 						</div>
