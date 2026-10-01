@@ -112,7 +112,7 @@ export default function LoginPage() {
               {error && <p className="rounded-md border border-foreground/20 bg-muted px-3 py-2 text-sm">{error}</p>}
               {success && <p className="rounded-md border border-foreground/20 bg-muted px-3 py-2 text-sm">{success}</p>}
 
-              <Button disabled={isSubmitting} className="w-full" type="submit">
+              <Button disabled={isSubmitting} className="w-full h-10" type="submit">
                 {isSubmitting ? "Please Wait..." : "Login"}
               </Button>
             </form>

@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import { Nunito, Geist } from "next/font/google";
+import { Nunito } from "next/font/google";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const nunito = Nunito({
   variable: "--font-nunito",
@@ -46,7 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", nunito.variable, "font-sans", geist.variable)}
+      className={cn("h-full", "antialiased", nunito.variable, "font-sans")}
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>

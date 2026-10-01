@@ -44,7 +44,7 @@ export function Header({ userName, onLogout, className = "" }: HeaderProps) {
             <DropdownMenuTrigger
               type="button"
               aria-label={`${userName} menu`}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-2 rounded-full px-2 py-1.5 px-4 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="hidden sm:inline">{userName}</span>
               <span className="flex size-9 items-center justify-center rounded-full border border-border/50 bg-muted text-xs font-semibold">
